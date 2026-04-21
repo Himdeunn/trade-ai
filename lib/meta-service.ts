@@ -23,7 +23,7 @@ export async function addMetaApiAccount(params: {
     platform: params.platform,
     application: 'MetaApi',
     magic: 0
-  });
+  } as any);
 
   // Wait for account to be deployed
   await account.deploy();
