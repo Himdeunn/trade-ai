@@ -14,7 +14,7 @@ export async function addMetaApiAccount(params: {
   platform: 'mt4' | 'mt5';
 }) {
   // Create account on MetaApi
-  const account = await api.metatraderAccountApi.addMetatraderAccount({
+  const account = await api.metatraderAccountApi.createAccount({
     name: params.name,
     type: 'cloud',
     login: params.login,
@@ -33,7 +33,7 @@ export async function addMetaApiAccount(params: {
 }
 
 export async function syncAccountTrades(dbAccountId: string, metaApiAccountId: string) {
-  const account = await api.metatraderAccountApi.getMetatraderAccount(metaApiAccountId);
+  const account = await api.metatraderAccountApi.getAccount(metaApiAccountId);
   await account.waitConnected();
   
   const connection = account.getRPCConnection();
