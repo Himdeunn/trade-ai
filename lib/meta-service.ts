@@ -13,9 +13,6 @@ export async function addMetaApiAccount(params: {
   server: string;
   platform: 'mt4' | 'mt5';
 }) {
-  const provisioningProfileApi = api.provisioningProfileApi;
-  const profiles = await provisioningProfileApi.getProvisioningProfiles();
-  
   // Create account on MetaApi
   const account = await api.metatraderAccountApi.createMetatraderAccount({
     name: params.name,
