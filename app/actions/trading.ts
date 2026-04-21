@@ -29,7 +29,7 @@ export async function linkTradingAccount(formData: FormData) {
 
     // 2. Save to our DB
     const [dbAccount] = await db.insert(tradingAccounts).values({
-      userId: session.user.id,
+      userId: session.user.id as string,
       metaApiAccountId: metaAccount.id,
       accountNumber: login,
       broker: name, // User's label for the broker
@@ -54,7 +54,7 @@ export async function syncAllAccounts() {
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const accounts = await db.query.tradingAccounts.findMany({
-    where: (table, { eq }) => eq(table.userId, session.user.id),
+    where: (table, { eq }) => eq(table.userId, session.user.id as string),
   });
 
   for (const account of accounts) {
