@@ -18,8 +18,9 @@ export default async function DashboardPage() {
   const session = await auth();
   
   // Get primary account
+  const userId = session!.user!.id as string;
   const account = await db.query.tradingAccounts.findFirst({
-    where: (table, { eq }) => eq(table.userId, session!.user!.id!),
+    where: (table, { eq }) => eq(table.userId, userId),
   });
 
   if (!account) {
