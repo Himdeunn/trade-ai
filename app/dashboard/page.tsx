@@ -1,106 +1,132 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { trades, tradingAccounts } from "@/lib/db/schema";
-import { eq, desc, sum } from "drizzle-orm";
+import { trades } from "@/lib/db/schema";
+import { desc, and, eq, gte } from "drizzle-orm";
 import { StatsCard } from "@/components/trading/stats-card";
 import { PerformanceChart } from "@/components/trading/performance-chart";
 import { 
-  Wallet, 
-  TrendingUp, 
-  PieChart, 
-  BarChart3,
+  Wallet,
+  TrendingUp,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  History
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
-export default async function DashboardPage() {
-  const session = (await auth()) || { 
-    user: { 
-      id: "mock-user-id",
-      name: "Guest Trader",
-      email: "guest@example.com"
-    } 
-  };
+import { SyncButton } from "@/components/trading/sync-button";
 
-  // Get primary account
-  const userId = session.user!.id as string;
+export default async function DashboardPage(props: {
+  searchParams: Promise<{ range?: string }>;
+}) {
+  const searchParams = await props.searchParams;
+  const session = await auth();
+  
+  if (!session?.user?.id) {
+    return null; // Layout handles redirect
+  }
+
+  const range = searchParams.range || "1M";
+  const userId = session.user.id as string;
   const account = await db.query.tradingAccounts.findFirst({
-    where: (table: any, { eq }: any) => eq(table.userId, userId),
+    where: (table, { eq }) => eq(table.userId, userId),
   });
 
   if (!account) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-        <div className="bg-zinc-100 dark:bg-zinc-900 p-6 rounded-full mb-6">
-          <Wallet className="h-12 w-12 text-zinc-400" />
+        <div className="bg-zinc-100 dark:bg-zinc-900 p-8 rounded-3xl mb-8">
+          <Wallet className="h-16 w-16 text-zinc-400" />
         </div>
-        <h2 className="text-2xl font-bold mb-2">No Trading Account Linked</h2>
-        <p className="text-zinc-500 dark:text-zinc-400 max-w-sm mb-8">
+        <h2 className="text-3xl font-bold mb-3 text-black dark:text-white">No Trading Account Linked</h2>
+        <p className="text-zinc-500 dark:text-zinc-400 max-w-md mb-10 text-lg">
           Connect your MetaTrader account via MetaApi to start tracking your performance automatically.
         </p>
-        <button className="bg-black dark:bg-white text-white dark:text-black px-8 py-3 rounded-xl font-bold">
+        <Link href="/dashboard/settings" className="bg-black dark:bg-white text-white dark:text-black px-10 py-4 rounded-2xl font-bold text-lg hover:scale-105 transition-transform shadow-xl">
           Link Account Now
-        </button>
+        </Link>
       </div>
     );
   }
 
+  // Calculate date filter
+  let dateFilter = new Date();
+  if (range === "1M") dateFilter.setMonth(dateFilter.getMonth() - 1);
+  else if (range === "3M") dateFilter.setMonth(dateFilter.getMonth() - 3);
+  else if (range === "6M") dateFilter.setMonth(dateFilter.getMonth() - 6);
+  else dateFilter = new Date(0);
+
   // Fetch stats
   const accountTrades = await db.query.trades.findMany({
-    where: (table: any, { eq }: any) => eq(table.accountId, account.id),
+    where: and(
+      eq(trades.accountId, account.id),
+      gte(trades.openTime, dateFilter)
+    ),
     orderBy: [desc(trades.openTime)],
-  }) as any[];
+  });
 
-  const totalProfit = accountTrades.reduce((acc: number, t: any) => acc + (t.profit || 0), 0);
+  const totalTrades = accountTrades.length;
+  const totalProfit = accountTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
   const winRate = accountTrades.length > 0 
-    ? (accountTrades.filter((t: any) => (t.profit || 0) > 0).length / accountTrades.length) * 100 
+    ? (accountTrades.filter(t => (t.profit || 0) > 0).length / accountTrades.length) * 100 
     : 0;
 
-  // Mock chart data for now (or calculate from history)
-  const chartData = [
-    { date: "Mon", equity: 10000 },
-    { date: "Tue", equity: 10200 },
-    { date: "Wed", equity: 10150 },
-    { date: "Thu", equity: 10500 },
-    { date: "Fri", equity: 10800 },
-  ];
+  // Calculate profit factor for the selected range
+  const winningTrades = accountTrades.filter(t => (t.profit || 0) > 0);
+  const losingTrades = accountTrades.filter(t => (t.profit || 0) < 0);
+  const grossProfit = winningTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
+  const grossLoss = Math.abs(losingTrades.reduce((acc, t) => acc + (t.profit || 0), 0));
+  const profitFactor = grossLoss > 0 ? (grossProfit / grossLoss) : (grossProfit > 0 ? 100 : 0);
+
+  // Simple equity curve for chart
+  let currentBalance = account.balance || 0;
+  const chartData = [{ date: Date.now(), equity: currentBalance }];
+  accountTrades.slice(0, 15).forEach((t) => {
+    currentBalance -= (t.profit || 0);
+    chartData.unshift({
+      date: t.openTime.getTime(),
+      equity: currentBalance
+    });
+  });
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-black dark:text-white">Dashboard Overview</h1>
-        <p className="text-zinc-500 dark:text-zinc-400">Welcome back, {session.user?.name}. Here&apos;s what&apos;s happening with your trading.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-black dark:text-white">Dashboard Overview</h1>
+          <p className="text-zinc-500 dark:text-zinc-400">Welcome back, {session.user.name}. Here&apos;s what&apos;s happening with your trading.</p>
+        </div>
+        <SyncButton />
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard 
           title="Total Balance" 
-          value="$10,800.50" 
-          change="+12.5%" 
-          trend="up" 
-          icon={Wallet} 
+          value={`$${(account.balance || 0).toLocaleString()}`} 
+          change={`${totalProfit >= 0 ? "+" : ""}$${totalProfit.toFixed(2)}`} 
+          trend={totalProfit >= 0 ? "up" : "down"} 
+          iconName="wallet" 
         />
         <StatsCard 
-          title="Total Profit" 
-          value={`$${totalProfit.toLocaleString()}`} 
-          change="+$450" 
+          title="Total Equity" 
+          value={`$${(account.equity || 0).toLocaleString()}`} 
+          change={range}
           trend="up" 
-          icon={TrendingUp} 
+          iconName="trending" 
         />
         <StatsCard 
           title="Win Rate" 
           value={`${winRate.toFixed(1)}%`} 
-          change="-2.1%" 
-          trend="down" 
-          icon={PieChart} 
+          change={`${totalTrades} Trades`} 
+          trend={winRate >= 50 ? "up" : "down"} 
+          iconName="pie" 
         />
         <StatsCard 
           title="Profit Factor" 
-          value="1.85" 
-          change="+0.2" 
-          trend="up" 
-          icon={BarChart3} 
+          value={profitFactor.toFixed(2)} 
+          change="Selected Range" 
+          trend={profitFactor >= 1 ? "up" : "down"} 
+          iconName="bar" 
         />
       </div>
 
@@ -109,37 +135,47 @@ export default async function DashboardPage() {
           <PerformanceChart data={chartData} />
         </div>
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-          <h3 className="text-lg font-bold mb-4">Recent Trades</h3>
+          <h3 className="text-lg font-bold mb-4 text-black dark:text-white">Recent Trades</h3>
           <div className="space-y-4">
-            {accountTrades.slice(0, 5).map((trade) => (
-              <div key={trade.id} className="flex items-center justify-between border-b border-zinc-50 pb-4 last:border-0 dark:border-zinc-900">
-                <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "p-2 rounded-lg",
-                    (trade.profit || 0) > 0 ? "bg-green-50 text-green-600 dark:bg-green-900/20" : "bg-red-50 text-red-600 dark:bg-red-900/20"
-                  )}>
-                    {(trade.profit || 0) > 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold">{trade.symbol}</p>
-                    <p className="text-xs text-zinc-500 uppercase">{trade.type} • {trade.volume} Lot</p>
-                  </div>
+            {accountTrades.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="h-12 w-12 rounded-full bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center mb-4">
+                  <History className="h-6 w-6 text-zinc-400" />
                 </div>
-                <div className="text-right">
-                  <p className={cn(
-                    "text-sm font-bold",
-                    (trade.profit || 0) > 0 ? "text-green-600" : "text-red-600"
-                  )}>
-                    {(trade.profit || 0) > 0 ? "+" : ""}${trade.profit?.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-zinc-500">{trade.openTime.toLocaleDateString()}</p>
-                </div>
+                <p className="text-sm text-zinc-500">No recent trades found.</p>
+                <p className="text-xs text-zinc-400">Click sync to fetch history.</p>
               </div>
-            ))}
+            ) : (
+              accountTrades.slice(0, 5).map((trade) => (
+                <div key={trade.id} className="flex items-center justify-between border-b border-zinc-50 pb-4 last:border-0 dark:border-zinc-900">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "p-2 rounded-lg",
+                      (trade.profit || 0) > 0 ? "bg-green-50 text-green-600 dark:bg-green-900/20" : "bg-red-50 text-red-600 dark:bg-red-900/20"
+                    )}>
+                      {(trade.profit || 0) > 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-black dark:text-white">{trade.symbol}</p>
+                      <p className="text-xs text-zinc-500 uppercase">{trade.type} • {trade.volume} Lot</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={cn(
+                      "text-sm font-bold",
+                      (trade.profit || 0) > 0 ? "text-green-600" : "text-red-600"
+                    )}>
+                      {(trade.profit || 0) > 0 ? "+" : ""}${trade.profit?.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-zinc-500">{trade.openTime.toLocaleDateString()}</p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-          <button className="mt-4 w-full text-sm font-medium text-zinc-500 hover:text-black dark:hover:text-white">
+          <Link href="/dashboard/history" className="mt-6 block w-full rounded-xl border border-zinc-100 py-3 text-center text-sm font-bold text-zinc-600 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 transition-all">
             View All History
-          </button>
+          </Link>
         </div>
       </div>
     </div>

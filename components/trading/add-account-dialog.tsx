@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { linkTradingAccount } from "@/app/actions/trading";
-import { Plus, X, Loader2 } from "lucide-react";
+import { linkTradingAccount, createEAAccount } from "@/app/actions/trading";
+import { Plus, X, Loader2, Cloud, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function AddAccountDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [mode, setMode] = useState<'cloud' | 'ea'>('cloud');
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -16,7 +17,9 @@ export function AddAccountDialog() {
     setError(null);
 
     const formData = new FormData(e.currentTarget);
-    const result = await linkTradingAccount(formData);
+    const result = mode === 'cloud' 
+      ? await linkTradingAccount(formData)
+      : await createEAAccount(formData);
 
     if (result.success) {
       setIsOpen(false);
@@ -59,8 +62,35 @@ export function AddAccountDialog() {
                 <X className="h-5 w-5" />
               </button>
 
-              <h2 className="text-2xl font-bold mb-1">Link Account</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 mb-8">Connect your MetaTrader account via MetaApi.</p>
+              <h2 className="text-2xl font-bold mb-1 text-black dark:text-white">Link Account</h2>
+              <p className="text-zinc-500 dark:text-zinc-400 mb-6">Choose how you want to sync your trades.</p>
+
+              <div className="grid grid-cols-2 gap-3 mb-8">
+                <button
+                  type="button"
+                  onClick={() => setMode('cloud')}
+                  className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-4 transition-all ${
+                    mode === 'cloud' 
+                      ? "border-blue-600 bg-blue-50/50 text-blue-600 dark:bg-blue-900/20" 
+                      : "border-zinc-100 hover:border-zinc-200 text-zinc-500 dark:border-zinc-900"
+                  }`}
+                >
+                  <Cloud className="h-6 w-6" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Cloud Sync</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('ea')}
+                  className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-4 transition-all ${
+                    mode === 'ea' 
+                      ? "border-blue-600 bg-blue-50/50 text-blue-600 dark:bg-blue-900/20" 
+                      : "border-zinc-100 hover:border-zinc-200 text-zinc-500 dark:border-zinc-900"
+                  }`}
+                >
+                  <Zap className="h-6 w-6" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Direct Sync (EA)</span>
+                </button>
+              </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -69,7 +99,7 @@ export function AddAccountDialog() {
                     name="name" 
                     required 
                     placeholder="e.g. IC Markets - Challenge"
-                    className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900" 
+                    className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white" 
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -79,14 +109,14 @@ export function AddAccountDialog() {
                       name="login" 
                       required 
                       placeholder="123456"
-                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900" 
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white" 
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300">Platform</label>
                     <select 
                       name="platform" 
-                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white"
                     >
                       <option value="mt4">MT4</option>
                       <option value="mt5">MT5</option>
@@ -99,18 +129,24 @@ export function AddAccountDialog() {
                     name="server" 
                     required 
                     placeholder="ICMarkets-Demo"
-                    className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900" 
+                    className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white" 
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300">Investor Password</label>
-                  <input 
-                    name="password" 
-                    type="password" 
-                    required 
-                    className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900" 
-                  />
-                </div>
+                
+                {mode === 'cloud' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                  >
+                    <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300">Investor Password</label>
+                    <input 
+                      name="password" 
+                      type="password" 
+                      required={mode === 'cloud'}
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white" 
+                    />
+                  </motion.div>
+                )}
 
                 {error && (
                   <p className="text-sm font-medium text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-xl">{error}</p>

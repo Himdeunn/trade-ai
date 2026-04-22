@@ -1,5 +1,5 @@
 import NextAuth from "next-auth";
-// import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/lib/db";
 import Credentials from "next-auth/providers/credentials";
 import { users } from "@/lib/db/schema";
@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  // adapter: DrizzleAdapter(db),
+  adapter: DrizzleAdapter(db),
   providers: [
     Credentials({
       credentials: {

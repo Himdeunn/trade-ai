@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { 
   LayoutDashboard, 
   History, 
   BrainCircuit, 
   Settings, 
   TrendingUp,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AddAccountDialog } from "@/components/trading/add-account-dialog";
@@ -55,8 +57,15 @@ export function Sidebar() {
           ))}
         </nav>
       </div>
-      <div className="p-4 mt-auto">
+      <div className="p-4 mt-auto space-y-2">
         <AddAccountDialog />
+        <button 
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+        >
+          <LogOut className="h-5 w-5" />
+          Logout
+        </button>
       </div>
     </div>
   );

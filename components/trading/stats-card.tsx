@@ -2,16 +2,37 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { 
+  Wallet, 
+  TrendingUp, 
+  PieChart, 
+  BarChart3,
+  Target,
+  Calendar
+} from "lucide-react";
+
+const icons = {
+  wallet: Wallet,
+  trending: TrendingUp,
+  pie: PieChart,
+  bar: BarChart3,
+  target: Target,
+  calendar: Calendar
+};
+
+export type IconType = keyof typeof icons;
 
 interface StatsCardProps {
   title: string;
   value: string;
   change?: string;
   trend?: "up" | "down";
-  icon: React.ElementType;
+  iconName: IconType;
 }
 
-export function StatsCard({ title, value, change, trend, icon: Icon }: StatsCardProps) {
+export function StatsCard({ title, value, change, trend, iconName }: StatsCardProps) {
+  const Icon = icons[iconName];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

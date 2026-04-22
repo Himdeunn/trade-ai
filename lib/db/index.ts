@@ -4,20 +4,9 @@ import * as schema from "./schema";
 
 const connectionString = process.env.DATABASE_URL;
 
-// Temporary mock to allow deployment without DB
-const mockDb = {
-  query: new Proxy({}, {
-    get: () => ({
-      findMany: async () => [],
-      findFirst: async () => null,
-    })
-  }),
-  insert: () => ({ values: () => ({ returning: () => [{}], onConflictDoNothing: () => Promise.resolve() }) }),
-  update: () => ({ set: () => ({ where: () => Promise.resolve() }) }),
-  delete: () => ({ where: () => Promise.resolve() }),
-  select: () => ({ from: () => ({ where: () => ({ limit: () => [] }), limit: () => [] }) }),
-  execute: async () => ({ rows: [] }),
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-} as any;
+if (!connectionString) {
+  throw new Error("DATABASE_URL is not defined");
+}
 
-export const db = connectionString ? drizzle(neon(connectionString), { schema }) : mockDb;
+const sql = neon(connectionString);
+export const db = drizzle(sql, { schema });

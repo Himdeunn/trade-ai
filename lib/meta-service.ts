@@ -1,6 +1,7 @@
-import MetaApi from "metaapi.cloud-sdk";
+import MetaApi from "metaapi.cloud-sdk/node";
 import { db } from "./db";
-import { trades } from "./db/schema";
+import { trades, tradingAccounts } from "./db/schema";
+import { eq } from "drizzle-orm";
 
 const token = process.env.META_API_TOKEN!;
 const api = new MetaApi(token);
@@ -34,31 +35,51 @@ export async function addMetaApiAccount(params: {
 
 export async function syncAccountTrades(dbAccountId: string, metaApiAccountId: string) {
   const account = await api.metatraderAccountApi.getAccount(metaApiAccountId);
-  await account.waitConnected();
+  
+  // Wait for account to be deployed and connected with retries
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      await account.waitConnected();
+      break;
+    } catch (error) {
+      retries--;
+      if (retries === 0) throw error;
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5s
+    }
+  }
   
   const connection = account.getRPCConnection();
   await connection.connect();
   await connection.waitSynchronized();
 
-  // Get history
+  // 1. Get current account information
+  const accountInfo = await connection.getAccountInformation();
+  await db.update(tradingAccounts)
+    .set({
+      balance: accountInfo.balance,
+      equity: accountInfo.equity,
+      currency: accountInfo.currency
+    })
+    .where(eq(tradingAccounts.id, dbAccountId));
+
+  // 2. Get history (Last 90 days)
   const history = await connection.getHistoryOrdersByTimeRange(
-    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+    new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), 
     new Date()
   );
 
-  // Sync to DB
+  // 3. Sync to DB
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for (const order of history.historyOrders as any[]) {
-    // Check if trade already exists
-    // Simplified for now: just insert if profit is not null (closed trades)
-    if (order.profit !== undefined) {
+  for (const order of (history.historyOrders as any[] || [])) {
+    if (order.profit !== undefined && order.openPrice !== undefined) {
       await db.insert(trades).values({
         accountId: dbAccountId,
         externalTradeId: order.id,
         symbol: order.symbol,
         type: order.type,
         volume: order.volume,
-        openPrice: order.openPrice!,
+        openPrice: order.openPrice,
         closePrice: order.closePrice,
         profit: order.profit,
         commission: order.commission,
