@@ -10,8 +10,10 @@ export async function getNotifications() {
   const session = await auth();
   if (!session?.user?.id) return [];
 
+  const userId = session.user.id as string;
+
   return await db.query.notifications.findMany({
-    where: (table, { eq }) => eq(table.userId, session.user.id as string),
+    where: (table, { eq }) => eq(table.userId, userId),
     orderBy: [desc(notifications.createdAt)],
     limit: 50,
   });
@@ -21,11 +23,13 @@ export async function markAsRead(notificationId: string) {
   const session = await auth();
   if (!session?.user?.id) return;
 
+  const userId = session.user.id as string;
+
   await db.update(notifications)
     .set({ isRead: 1 })
     .where(and(
       eq(notifications.id, notificationId),
-      eq(notifications.userId, session.user.id as string)
+      eq(notifications.userId, userId)
     ));
 
   revalidatePath("/dashboard/notifications");
@@ -35,9 +39,11 @@ export async function markAllAsRead() {
   const session = await auth();
   if (!session?.user?.id) return;
 
+  const userId = session.user.id as string;
+
   await db.update(notifications)
     .set({ isRead: 1 })
-    .where(eq(notifications.userId, session.user.id as string));
+    .where(eq(notifications.userId, userId));
 
   revalidatePath("/dashboard/notifications");
 }
@@ -51,9 +57,11 @@ export async function updateNotificationSettings(settings: {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
+  const userId = session.user.id as string;
+
   await db.update(users)
     .set(settings)
-    .where(eq(users.id, session.user.id as string));
+    .where(eq(users.id, userId));
 
   revalidatePath("/dashboard/settings");
   return { success: true };
