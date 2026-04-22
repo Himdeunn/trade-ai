@@ -8,23 +8,40 @@ function getModel() {
   }
   const genAI = new GoogleGenerativeAI(apiKey);
   // Try using v1 instead of v1beta if possible, or just the model name
+  // Using gemini-1.5-flash as the stable version (2.5 is not yet available)
   return genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function analyzeTradingPerformance(trades: any[]) {
-  const prompt = `
-    You are an expert trading psychologist and performance analyst. 
-    Analyze the following trading history and provide:
-    1. A summary of the trading style.
-    2. Psychological patterns detected (e.g., revenge trading, over-leveraging).
-    3. Three actionable tips for improvement.
+  if (!trades || trades.length === 0) {
+    return "Belum ada data trading untuk dianalisis. Mulai trading atau import history agar saya bisa memberikan insight! 🚀";
+  }
 
-    Trading Data:
-    ${JSON.stringify(trades, null, 2)}
-    
-    Return the response in a structured format with headings.
-  `;
+  // Aggregate data for better AI context (similar to reference code style)
+  const totalProfit = trades.reduce((acc, t) => acc + (t.profit || 0), 0);
+  const winRate = (trades.filter(t => (t.profit || 0) > 0).length / trades.length) * 100;
+  
+  const symbolStats = trades.reduce((acc, t) => {
+    if (!acc[t.symbol]) acc[t.symbol] = { count: 0, profit: 0 };
+    acc[t.symbol].count++;
+    acc[t.symbol].profit += (t.profit || 0);
+    return acc;
+  }, {} as any);
+
+  const statsString = Object.entries(symbolStats)
+    .map(([sym, data]: any) => `${sym}: ${data.count} trades (Profit: ${data.profit.toFixed(2)})`)
+    .join(" | ");
+
+  const prompt = `Saya memiliki data performa trading berikut:
+  - Total Trades: ${trades.length}
+  - Win Rate: ${winRate.toFixed(1)}%
+  - Total Profit/Loss: ${totalProfit.toFixed(2)}
+  - Detail Per Symbol: [ ${statsString} ]
+
+  Berikan analisis psikologi trading saya dalam 2-3 kalimat yang sangat padat dan 2 tips peningkatan performa yang spesifik. 
+  Gunakan nada bicara santai seperti teman (bro/sis) tapi tetap profesional sebagai expert analyst. 
+  Format output harus menggunakan **markdown tebal** pada poin-poin penting.`;
 
   try {
     const model = getModel();
@@ -34,8 +51,8 @@ export async function analyzeTradingPerformance(trades: any[]) {
   } catch (error: any) {
     console.error("Gemini AI Analysis Error:", error);
     if (error.message?.includes("not found")) {
-      return "AI Model Error: The selected model is not available. Please contact support.";
+      return "AI Model Error: Model 'gemini-1.5-flash' tidak ditemukan atau limit API tercapai. Hubungi support.";
     }
-    return "Failed to generate AI analysis. Please try again later.";
+    return "Gagal sinkronisasi AI. Coba lagi nanti ya! 🙏";
   }
 }
