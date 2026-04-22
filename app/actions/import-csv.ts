@@ -52,10 +52,6 @@ export async function importTradesFromCSV(
 
   if (!account) return { success: false, imported: 0, skipped: 0, error: "Account not found" };
 
-  // Detect delimiter
-  const firstLine = csvContent.split("\n")[0] || "";
-  const delimiter = firstLine.includes("\t") ? "\t" : ",";
-
   const lines = csvContent
     .split("\n")
     .map((l) => l.trim())
@@ -65,8 +61,46 @@ export async function importTradesFromCSV(
     return { success: false, imported: 0, skipped: 0, error: "File is empty or has no data rows." };
   }
 
-  // Parse header to detect column positions
-  const headers = lines[0].split(delimiter).map((h) => h.replace(/"/g, "").trim().toLowerCase());
+  // Detect delimiter and header index
+  let delimiter = ",";
+  let headerIndex = -1;
+  let headers: string[] = [];
+
+  // Try to find the header row by looking for keywords in the first 20 lines
+  for (let i = 0; i < Math.min(lines.length, 20); i++) {
+    const line = lines[i];
+    // Check both common delimiters
+    const commaHeaders = line.split(",").map((h) => h.replace(/"/g, "").trim().toLowerCase());
+    const tabHeaders = line.split("\t").map((h) => h.replace(/"/g, "").trim().toLowerCase());
+
+    const isHeader = (h: string[]) => 
+      (h.includes("symbol") || h.includes("item")) && 
+      (h.includes("type") || h.includes("direction")) &&
+      (h.includes("time") || h.includes("open") || h.includes("date"));
+
+    if (isHeader(commaHeaders)) {
+      delimiter = ",";
+      headers = commaHeaders;
+      headerIndex = i;
+      break;
+    } else if (isHeader(tabHeaders)) {
+      delimiter = "\t";
+      headers = tabHeaders;
+      headerIndex = i;
+      break;
+    }
+  }
+
+  if (headerIndex === -1) {
+    // Fallback to first line if no header found, but usually this means it's not a valid MT4/MT5 report
+    const firstLineHeaders = lines[0].split(",").map((h) => h.replace(/"/g, "").trim().toLowerCase());
+    return {
+      success: false,
+      imported: 0,
+      skipped: 0,
+      error: `Could not detect required columns (Symbol, Type, Time). Found first line: ${firstLineHeaders.join(", ")}`,
+    };
+  }
 
   const colIndex = (names: string[]): number => {
     for (const name of names) {
@@ -85,21 +119,12 @@ export async function importTradesFromCSV(
   const profitCol    = colIndex(["profit"]);
   const commissionCol= colIndex(["commission"]);
   const swapCol      = colIndex(["swap"]);
-  const openTimeCol  = colIndex(["open time", "time (open)", "open"]);
+  const openTimeCol  = colIndex(["open time", "time (open)", "open", "time"]);
   const closeTimeCol = colIndex(["close time", "time (close)", "close"]);
-
-  if (symbolCol === -1 || typeCol === -1 || openPriceCol === -1) {
-    return {
-      success: false,
-      imported: 0,
-      skipped: 0,
-      error: `Could not detect required columns (Symbol, Type, Open Price). Found headers: ${headers.join(", ")}`,
-    };
-  }
 
   const parsedTrades: ParsedTrade[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
+  for (let i = headerIndex + 1; i < lines.length; i++) {
     const cols = lines[i].split(delimiter).map((c) => c.replace(/"/g, "").trim());
     if (cols.length < 3) continue;
 
