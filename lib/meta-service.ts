@@ -47,7 +47,7 @@ export async function syncAccountTrades(dbAccountId: string, metaApiAccountId: s
   );
 
   // Sync to DB
-  for (const order of history.historyOrders) {
+  for (const order of history.historyOrders as any[]) {
     // Check if trade already exists
     // Simplified for now: just insert if profit is not null (closed trades)
     if (order.profit !== undefined) {

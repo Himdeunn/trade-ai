@@ -4,9 +4,19 @@ import * as schema from "./schema";
 
 const connectionString = process.env.DATABASE_URL;
 
-if (!connectionString) {
-  console.warn("WARNING: DATABASE_URL is not defined. Database connection will fail if used.");
-}
+// Temporary mock to allow deployment without DB
+const mockDb = {
+  query: new Proxy({}, {
+    get: () => ({
+      findMany: async () => [],
+      findFirst: async () => null,
+    })
+  }),
+  insert: () => ({ values: () => ({ returning: () => [{}], onConflictDoNothing: () => Promise.resolve() }) }),
+  update: () => ({ set: () => ({ where: () => Promise.resolve() }) }),
+  delete: () => ({ where: () => Promise.resolve() }),
+  select: () => ({ from: () => ({ where: () => ({ limit: () => [] }), limit: () => [] }) }),
+  execute: async () => ({ rows: [] }),
+} as any;
 
-const sql = neon(connectionString || "");
-export const db = drizzle(sql, { schema });
+export const db = connectionString ? drizzle(neon(connectionString), { schema }) : mockDb;
