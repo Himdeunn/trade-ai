@@ -7,8 +7,8 @@ function getModel() {
     throw new Error("GEMINI_API_KEY is not defined in environment variables");
   }
   const genAI = new GoogleGenerativeAI(apiKey);
-  // Try using v1 instead of v1beta if possible, or just the model name
-  // Using gemini-1.5-flash as the stable version (2.5 is not yet available)
+  // PENTING: Jangan ganti ke 2.5 atau 3.5 karena model tersebut belum ada di API publik.
+  // Gunakan 'gemini-1.5-flash' (cepat) atau 'gemini-1.5-pro' (paling cerdas).
   return genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 }
 
@@ -30,18 +30,18 @@ export async function analyzeTradingPerformance(trades: any[]) {
   }, {} as any);
 
   const statsString = Object.entries(symbolStats)
-    .map(([sym, data]: any) => `${sym}: ${data.count} trades (Profit: ${data.profit.toFixed(2)})`)
+    .map(([sym, data]: any) => `${sym}: ${data.count} trades (Net Profit: ${data.profit.toFixed(2)})`)
     .join(" | ");
 
-  const prompt = `Saya memiliki data performa trading berikut:
-  - Total Trades: ${trades.length}
-  - Win Rate: ${winRate.toFixed(1)}%
-  - Total Profit/Loss: ${totalProfit.toFixed(2)}
-  - Detail Per Symbol: [ ${statsString} ]
+  const prompt = `Halo! Saya adalah TradeAI Analyst. Berikut adalah data performa trading Anda:
+  - Ringkasan Statistik: ${trades.length} trades, Win Rate ${winRate.toFixed(1)}%, Profit/Loss ${totalProfit.toFixed(2)}
+  - Performa per Asset: [ ${statsString} ]
 
-  Berikan analisis psikologi trading saya dalam 2-3 kalimat yang sangat padat dan 2 tips peningkatan performa yang spesifik. 
-  Gunakan nada bicara santai seperti teman (bro/sis) tapi tetap profesional sebagai expert analyst. 
-  Format output harus menggunakan **markdown tebal** pada poin-poin penting.`;
+  Sebagai pakar psikologi trading dari TradeAI, berikan analisis tajam mengenai pola trading saya dalam 2-3 kalimat yang sangat informatif. 
+  Setelah itu, berikan 2 tips 'God Tier' untuk meningkatkan profitabilitas di sesi berikutnya.
+  
+  Gunakan nada bicara yang antusias, profesional, dan memberikan semangat (seperti coach trading pribadi).
+  Format output wajib menggunakan **markdown tebal** pada istilah teknis dan angka penting.`;
 
   try {
     const model = getModel();
