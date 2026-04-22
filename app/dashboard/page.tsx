@@ -15,12 +15,18 @@ import {
 import { cn } from "@/lib/utils";
 
 export default async function DashboardPage() {
-  const session = (await auth()) || { user: { id: "mock-user-id" } };
+  const session = (await auth()) || { 
+    user: { 
+      id: "mock-user-id",
+      name: "Guest Trader",
+      email: "guest@example.com"
+    } 
+  };
 
   // Get primary account
-  const userId = session.user.id as string;
+  const userId = session.user!.id as string;
   const account = await db.query.tradingAccounts.findFirst({
-    where: (table, { eq }) => eq(table.userId, userId),
+    where: (table: any, { eq }: any) => eq(table.userId, userId),
   });
 
   if (!account) {
@@ -42,13 +48,13 @@ export default async function DashboardPage() {
 
   // Fetch stats
   const accountTrades = await db.query.trades.findMany({
-    where: (table, { eq }) => eq(table.accountId, account.id),
+    where: (table: any, { eq }: any) => eq(table.accountId, account.id),
     orderBy: [desc(trades.openTime)],
-  });
+  }) as any[];
 
-  const totalProfit = accountTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
+  const totalProfit = accountTrades.reduce((acc: number, t: any) => acc + (t.profit || 0), 0);
   const winRate = accountTrades.length > 0 
-    ? (accountTrades.filter(t => (t.profit || 0) > 0).length / accountTrades.length) * 100 
+    ? (accountTrades.filter((t: any) => (t.profit || 0) > 0).length / accountTrades.length) * 100 
     : 0;
 
   // Mock chart data for now (or calculate from history)
@@ -64,7 +70,7 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-black dark:text-white">Dashboard Overview</h1>
-        <p className="text-zinc-500 dark:text-zinc-400">Welcome back, {session?.user?.name}. Here's what's happening with your trading.</p>
+        <p className="text-zinc-500 dark:text-zinc-400">Welcome back, {session.user?.name}. Here&apos;s what&apos;s happening with your trading.</p>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">

@@ -1,6 +1,5 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { TrendingUp, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -53,7 +52,7 @@ export default function LoginPage() {
 
         <div className="mt-8 text-center">
           <p className="text-sm text-zinc-500">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <a href="#" className="font-bold text-black dark:text-white hover:underline">Sign up for free</a>
           </p>
         </div>

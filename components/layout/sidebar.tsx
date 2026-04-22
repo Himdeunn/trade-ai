@@ -8,7 +8,6 @@ import {
   BrainCircuit, 
   Settings, 
   TrendingUp,
-  PlusCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AddAccountDialog } from "@/components/trading/add-account-dialog";

@@ -17,6 +17,7 @@ const mockDb = {
   delete: () => ({ where: () => Promise.resolve() }),
   select: () => ({ from: () => ({ where: () => ({ limit: () => [] }), limit: () => [] }) }),
   execute: async () => ({ rows: [] }),
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 } as any;
 
 export const db = connectionString ? drizzle(neon(connectionString), { schema }) : mockDb;

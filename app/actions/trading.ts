@@ -56,7 +56,7 @@ export async function syncAllAccounts() {
 
   const userId = session.user.id as string;
   const accounts = await db.query.tradingAccounts.findMany({
-    where: (table, { eq }) => eq(table.userId, userId),
+    where: (table: any, { eq }: any) => eq(table.userId, userId),
   });
 
   for (const account of accounts) {

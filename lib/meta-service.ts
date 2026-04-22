@@ -1,7 +1,6 @@
 import MetaApi from "metaapi.cloud-sdk";
 import { db } from "./db";
-import { trades, tradingAccounts } from "./db/schema";
-import { eq } from "drizzle-orm";
+import { trades } from "./db/schema";
 
 const token = process.env.META_API_TOKEN!;
 const api = new MetaApi(token);
@@ -23,6 +22,7 @@ export async function addMetaApiAccount(params: {
     platform: params.platform,
     application: 'MetaApi',
     magic: 0
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any);
 
   // Wait for account to be deployed
@@ -47,6 +47,7 @@ export async function syncAccountTrades(dbAccountId: string, metaApiAccountId: s
   );
 
   // Sync to DB
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   for (const order of history.historyOrders as any[]) {
     // Check if trade already exists
     // Simplified for now: just insert if profit is not null (closed trades)
