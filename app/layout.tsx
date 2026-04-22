@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: "Advanced trading journaling and AI-driven psychological insights.",
 };
 
+import { Toaster } from "sonner";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -20,6 +22,7 @@ export default function RootLayout({
       <body className={`${inter.className} min-h-full flex flex-col bg-zinc-50 dark:bg-black`}>
         <AuthProvider>
           {children}
+          <Toaster position="top-right" richColors />
         </AuthProvider>
       </body>
     </html>

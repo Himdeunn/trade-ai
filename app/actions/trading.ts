@@ -89,6 +89,9 @@ export async function deleteTradingAccount(accountId: string) {
   revalidatePath("/dashboard/settings");
 }
 
+import { aiAnalyses, trades as tradesTable } from "@/lib/db/schema";
+import { analyzeTradingPerformance } from "@/lib/ai-service";
+
 export async function createEAAccount(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -115,5 +118,59 @@ export async function createEAAccount(formData: FormData) {
   } catch (error: any) {
     console.error("Create EA Account Error:", error);
     return { success: false, error: error.message };
+  }
+}
+
+export async function updateAccountCurrency(accountId: string, currency: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  await db.update(tradingAccounts)
+    .set({ currency })
+    .where(and(
+      eq(tradingAccounts.id, accountId),
+      eq(tradingAccounts.userId, session.user.id as string)
+    ));
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/settings");
+  return { success: true };
+}
+
+export async function requestAiAnalysis(accountId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+
+  try {
+    // 1. Fetch recent trades for this account
+    const recentTrades = await db.query.trades.findMany({
+      where: eq(tradesTable.accountId, accountId),
+      orderBy: [desc(tradesTable.openTime)],
+      limit: 50,
+    });
+
+    if (recentTrades.length < 5) {
+      return { success: false, error: "Not enough trades to analyze (minimum 5 required)." };
+    }
+
+    // 2. Run AI Analysis
+    const analysisText = await analyzeTradingPerformance(recentTrades);
+
+    if (analysisText.includes("Failed to generate")) {
+      return { success: false, error: "AI service is currently unavailable. Please try again later." };
+    }
+
+    // 3. Save to DB
+    await db.insert(aiAnalyses).values({
+      accountId,
+      content: analysisText,
+      category: "Performance Review",
+    });
+
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error: any) {
+    console.error("AI Analysis Action Error:", error);
+    return { success: false, error: "An error occurred during analysis." };
   }
 }

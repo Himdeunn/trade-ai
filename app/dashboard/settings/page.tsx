@@ -7,6 +7,7 @@ import { AddAccountDialog } from "@/components/trading/add-account-dialog";
 import { deleteTradingAccount } from "@/app/actions/trading";
 import { CopyButton } from "@/components/ui/copy-button";
 import { NotificationSettings } from "@/components/trading/notification-settings";
+import { CurrencySelector } from "@/components/trading/currency-selector";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -96,11 +97,13 @@ export default async function SettingsPage() {
                         <p className="text-sm text-zinc-500">
                           {account.platform.toUpperCase()} • Account: {account.accountNumber} • {account.server}
                         </p>
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-4 mt-2">
                           <code className="bg-zinc-100 dark:bg-zinc-900 px-2 py-1 rounded text-[10px] text-zinc-600 dark:text-zinc-400 font-mono">
                             EA Key: {account.apiKey}
                           </code>
                           <CopyButton text={account.apiKey} />
+                          <div className="h-4 w-[1px] bg-zinc-200 dark:bg-zinc-800 mx-1" />
+                          <CurrencySelector accountId={account.id} currentCurrency={account.currency || "USD"} />
                         </div>
                       </div>
                     </div>

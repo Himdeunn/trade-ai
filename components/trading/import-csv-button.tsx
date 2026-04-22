@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { importTradesFromFile } from "@/app/actions/import-csv";
 import { UploadCloud, FileText, CheckCircle2, AlertCircle, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface ImportCSVButtonProps {
   accounts: { id: string; broker: string; accountNumber: string }[];
@@ -21,8 +22,7 @@ export function ImportCSVButton({ accounts }: ImportCSVButtonProps) {
   const handleFile = (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (ext !== "csv" && ext !== "xlsx" && ext !== "xls" && ext !== "txt") {
-      setStatus("error");
-      setResult({ imported: 0, skipped: 0, error: "Please upload a .csv, .xlsx, or .txt file." });
+      toast.error("Invalid file format. Please upload .csv, .xlsx, or .txt");
       return;
     }
     setSelectedFile(file);
@@ -43,6 +43,8 @@ export function ImportCSVButton({ accounts }: ImportCSVButtonProps) {
   const handleImport = async () => {
     if (!selectedFile || !selectedAccount) return;
     setStatus("loading");
+    const toastId = toast.loading("Parsing and importing trades...");
+    
     try {
       const reader = new FileReader();
       reader.onload = async (e) => {
@@ -51,15 +53,19 @@ export function ImportCSVButton({ accounts }: ImportCSVButtonProps) {
         if (res.success) {
           setStatus("success");
           setResult({ imported: res.imported, skipped: res.skipped });
+          toast.success(`Import complete! ${res.imported} trades added.`, { id: toastId });
         } else {
           setStatus("error");
           setResult({ imported: 0, skipped: 0, error: res.error });
+          toast.error(res.error || "Import failed", { id: toastId });
         }
       };
       reader.readAsDataURL(selectedFile);
-    } catch {
+    } catch (err) {
+      console.error("Import error:", err);
       setStatus("error");
       setResult({ imported: 0, skipped: 0, error: "An unexpected error occurred." });
+      toast.error("An unexpected error occurred", { id: toastId });
     }
   };
 

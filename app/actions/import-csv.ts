@@ -21,19 +21,42 @@ interface ParsedTrade {
   closeTime: Date | null;
 }
 
-// Parse a date string from MT4/MT5 format: "2024.01.15 12:30:00" or "2024-01-15 12:30:00"
-function parseDate(dateStr: any): Date | null {
-  if (!dateStr) return null;
-  if (dateStr instanceof Date) return dateStr;
-  const str = String(dateStr).trim().replace(/\./g, "-");
-  const d = new Date(str.replace(" ", "T"));
-  return isNaN(d.getTime()) ? null : d;
+// Parse a date string from MT4/MT5 format or Excel serial number
+function parseDate(val: any): Date | null {
+  if (!val) return null;
+  if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+  
+  // Handle Excel serial numbers (numbers like 45000.5)
+  if (typeof val === "number" || (!isNaN(Number(val)) && !String(val).includes("-") && !String(val).includes("."))) {
+    const serial = Number(val);
+    if (serial > 0 && serial < 100000) { // Reasonable Excel date range
+      return new Date(Math.round((serial - 25569) * 86400 * 1000));
+    }
+  }
+
+  const str = String(val).trim();
+  // Try MetaTrader format: "2024.01.15 12:30:00"
+  const mtFormat = str.replace(/\./g, "-").replace(" ", "T");
+  let d = new Date(mtFormat);
+  
+  // Fallback for other formats
+  if (isNaN(d.getTime())) {
+    d = new Date(str);
+  }
+
+  // Final check for displacement error (PostgreSQL limit is usually 4713 BC to 294276 AD)
+  if (isNaN(d.getTime()) || d.getFullYear() > 10000 || d.getFullYear() < 1900) {
+    return null;
+  }
+  
+  return d;
 }
 
 function parseNumber(val: any): number {
   if (val === undefined || val === null || val === "") return 0;
   if (typeof val === "number") return val;
-  return parseFloat(String(val).replace(/,/g, "").trim()) || 0;
+  const cleaned = String(val).replace(/[^0-9.-]/g, "").trim();
+  return parseFloat(cleaned) || 0;
 }
 
 export async function importTradesFromFile(
@@ -44,7 +67,6 @@ export async function importTradesFromFile(
   const session = await auth();
   if (!session?.user?.id) return { success: false, imported: 0, skipped: 0, error: "Unauthorized" };
 
-  // Verify this account belongs to the user
   const account = await db.query.tradingAccounts.findFirst({
     where: and(
       eq(tradingAccounts.id, accountId),
@@ -58,33 +80,31 @@ export async function importTradesFromFile(
 
   try {
     const buffer = Buffer.from(base64Content, "base64");
-    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
   } catch (err) {
     console.error("Error parsing file:", err);
-    return { success: false, imported: 0, skipped: 0, error: "Could not read the file. Please ensure it is a valid CSV or XLSX file." };
+    return { success: false, imported: 0, skipped: 0, error: "Could not read the file." };
   }
 
   if (data.length < 2) {
     return { success: false, imported: 0, skipped: 0, error: "File is empty or has no data rows." };
   }
 
-  // Detect header index
   let headerIndex = -1;
   let headers: string[] = [];
 
-  for (let i = 0; i < Math.min(data.length, 30); i++) {
+  for (let i = 0; i < Math.min(data.length, 50); i++) {
     const row = data[i];
     if (!Array.isArray(row)) continue;
     
     const rowHeaders = row.map((h) => String(h || "").trim().toLowerCase());
-
     const isHeader = (h: string[]) => 
       (h.includes("symbol") || h.includes("item")) && 
       (h.includes("type") || h.includes("direction")) &&
-      (h.includes("time") || h.includes("open") || h.includes("date"));
+      (h.includes("price") || h.includes("open price"));
 
     if (isHeader(rowHeaders)) {
       headers = rowHeaders;
@@ -95,32 +115,48 @@ export async function importTradesFromFile(
 
   if (headerIndex === -1) {
     return {
-      success: false,
-      imported: 0,
-      skipped: 0,
-      error: "Could not detect required columns (Symbol, Type, Time). Please ensure you are using a standard MetaTrader report.",
+      success: false, imported: 0, skipped: 0,
+      error: "Could not detect required columns. Please use a standard MetaTrader report.",
     };
   }
 
-  const colIndex = (names: string[]): number => {
+  // Robust column detection for duplicates (MT5 uses Time/Price twice)
+  const timeIndices = headers.map((h, idx) => (h.includes("time") || h === "open" ? idx : -1)).filter(i => i !== -1);
+  const priceIndices = headers.map((h, idx) => (h.includes("price") || h === "open" || h === "close" ? idx : -1)).filter(i => i !== -1);
+  
+  const colIndex = (names: string[], skipIdx: number = -1): number => {
     for (const name of names) {
-      const idx = headers.findIndex((h) => h.includes(name));
+      const idx = headers.findIndex((h, i) => h.includes(name) && i !== skipIdx);
       if (idx !== -1) return idx;
     }
     return -1;
   };
 
-  const ticketCol    = colIndex(["ticket", "deal", "order", "#"]);
-  const symbolCol    = colIndex(["symbol", "item", "pair"]);
-  const typeCol      = colIndex(["type", "direction"]);
-  const volumeCol    = colIndex(["volume", "size", "lots"]);
-  const openPriceCol = colIndex(["open price", "price (open)", "open"]);
-  const closePriceCol= colIndex(["close price", "price (close)", "close"]);
-  const profitCol    = colIndex(["profit"]);
-  const commissionCol= colIndex(["commission"]);
-  const swapCol      = colIndex(["swap"]);
-  const openTimeCol  = colIndex(["open time", "time (open)", "open", "time"]);
-  const closeTimeCol = colIndex(["close time", "time (close)", "close"]);
+  const symbolCol = colIndex(["symbol", "item", "pair"]);
+  const typeCol = colIndex(["type", "direction"]);
+  const volumeCol = colIndex(["volume", "size", "lots"]);
+  const profitCol = colIndex(["profit"]);
+  const ticketCol = colIndex(["ticket", "deal", "order", "#"]);
+
+  // Open/Close specific detection
+  let openTimeCol = timeIndices[0];
+  let closeTimeCol = timeIndices.length > 1 ? timeIndices[1] : -1;
+  
+  let openPriceCol = priceIndices[0];
+  let closePriceCol = priceIndices.length > 1 ? priceIndices[1] : -1;
+
+  // Refine if specific headers exist
+  const specificOpenTime = colIndex(["open time", "time (open)"]);
+  if (specificOpenTime !== -1) openTimeCol = specificOpenTime;
+  
+  const specificCloseTime = colIndex(["close time", "time (close)"]);
+  if (specificCloseTime !== -1) closeTimeCol = specificCloseTime;
+
+  const specificOpenPrice = colIndex(["open price", "price (open)"]);
+  if (specificOpenPrice !== -1) openPriceCol = specificOpenPrice;
+
+  const specificClosePrice = colIndex(["close price", "price (close)"]);
+  if (specificClosePrice !== -1) closePriceCol = specificClosePrice;
 
   const parsedTrades: ParsedTrade[] = [];
 
@@ -131,24 +167,24 @@ export async function importTradesFromFile(
     const typeRaw = String(row[typeCol] || "").toLowerCase();
     if (!typeRaw.includes("buy") && !typeRaw.includes("sell")) continue;
 
-    const type = typeRaw.includes("buy") ? "buy" : "sell";
     const symbol = String(row[symbolCol] || "");
     if (!symbol) continue;
 
-    const ticket = ticketCol !== -1 ? String(row[ticketCol]) : `file_${i}_${Date.now()}`;
-    const openTime = openTimeCol !== -1 ? parseDate(row[openTimeCol]) : null;
+    const openTime = parseDate(row[openTimeCol]);
     if (!openTime) continue;
+
+    const ticket = ticketCol !== -1 ? String(row[ticketCol]) : `f_${i}_${openTime.getTime()}`;
 
     parsedTrades.push({
       externalTradeId: `file_${ticket}`,
       symbol,
-      type,
-      volume: volumeCol !== -1 ? parseNumber(row[volumeCol]) : 0,
+      type: typeRaw.includes("buy") ? "buy" : "sell",
+      volume: parseNumber(row[volumeCol]),
       openPrice: parseNumber(row[openPriceCol]),
       closePrice: closePriceCol !== -1 ? parseNumber(row[closePriceCol]) : null,
-      profit: profitCol !== -1 ? parseNumber(row[profitCol]) : null,
-      commission: commissionCol !== -1 ? parseNumber(row[commissionCol]) : null,
-      swap: swapCol !== -1 ? parseNumber(row[swapCol]) : null,
+      profit: parseNumber(row[profitCol]),
+      commission: parseNumber(row[colIndex(["commission"])]),
+      swap: parseNumber(row[colIndex(["swap"])]),
       openTime,
       closeTime: closeTimeCol !== -1 ? parseDate(row[closeTimeCol]) : null,
     });

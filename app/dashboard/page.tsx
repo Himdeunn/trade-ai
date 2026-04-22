@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 import { SyncButton } from "@/components/trading/sync-button";
+import { AiAnalysisButton } from "@/components/trading/ai-analysis-button";
 
 export default async function DashboardPage(props: {
   searchParams: Promise<{ range?: string }>;
@@ -96,7 +97,10 @@ export default async function DashboardPage(props: {
           <h1 className="text-3xl font-bold tracking-tight text-black dark:text-white">Dashboard Overview</h1>
           <p className="text-zinc-500 dark:text-zinc-400">Welcome back, {session.user.name}. Here&apos;s what&apos;s happening with your trading.</p>
         </div>
-        <SyncButton />
+        <div className="flex items-center gap-3">
+          <AiAnalysisButton accountId={account.id} />
+          <SyncButton />
+        </div>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
