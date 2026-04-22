@@ -7,9 +7,8 @@ function getModel() {
     throw new Error("GEMINI_API_KEY is not defined in environment variables");
   }
   const genAI = new GoogleGenerativeAI(apiKey);
-  // PENTING: Jangan ganti ke 2.5 atau 3.5 karena model tersebut belum ada di API publik.
-  // Gunakan 'gemini-1.5-flash' (cepat) atau 'gemini-1.5-pro' (paling cerdas).
-  return genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  // Menggunakan Gemini 2.5 Flash sesuai permintaan (General Availability).
+  return genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
