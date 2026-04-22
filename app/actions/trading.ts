@@ -6,7 +6,7 @@ import { tradingAccounts } from "@/lib/db/schema";
 import { addMetaApiAccount, syncAccountTrades } from "@/lib/meta-service";
 import { encrypt } from "@/lib/crypto";
 import { revalidatePath } from "next/cache";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 export async function linkTradingAccount(formData: FormData) {
   const session = await auth();
