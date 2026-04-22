@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { trades, tradingAccounts } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import * as XLSX from "xlsx";
 
 interface ParsedTrade {
   externalTradeId: string;
@@ -21,23 +22,24 @@ interface ParsedTrade {
 }
 
 // Parse a date string from MT4/MT5 format: "2024.01.15 12:30:00" or "2024-01-15 12:30:00"
-function parseDate(dateStr: string): Date | null {
-  if (!dateStr || dateStr.trim() === "") return null;
-  const cleaned = dateStr.trim().replace(/\./g, "-");
-  const d = new Date(cleaned.replace(" ", "T"));
+function parseDate(dateStr: any): Date | null {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return dateStr;
+  const str = String(dateStr).trim().replace(/\./g, "-");
+  const d = new Date(str.replace(" ", "T"));
   return isNaN(d.getTime()) ? null : d;
 }
 
-function parseNumber(val: string): number {
-  if (!val || val.trim() === "") return 0;
-  return parseFloat(val.replace(/,/g, "").trim()) || 0;
+function parseNumber(val: any): number {
+  if (val === undefined || val === null || val === "") return 0;
+  if (typeof val === "number") return val;
+  return parseFloat(String(val).replace(/,/g, "").trim()) || 0;
 }
 
-// Detect and parse MT5 HTML Report format (tab-separated from the table)
-// or MT4/MT5 CSV export format
-export async function importTradesFromCSV(
+export async function importTradesFromFile(
   accountId: string,
-  csvContent: string
+  base64Content: string,
+  fileName: string
 ): Promise<{ success: boolean; imported: number; skipped: number; error?: string }> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, imported: 0, skipped: 0, error: "Unauthorized" };
@@ -52,53 +54,51 @@ export async function importTradesFromCSV(
 
   if (!account) return { success: false, imported: 0, skipped: 0, error: "Account not found" };
 
-  const lines = csvContent
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+  let data: any[][] = [];
 
-  if (lines.length < 2) {
+  try {
+    const buffer = Buffer.from(base64Content, "base64");
+    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+  } catch (err) {
+    console.error("Error parsing file:", err);
+    return { success: false, imported: 0, skipped: 0, error: "Could not read the file. Please ensure it is a valid CSV or XLSX file." };
+  }
+
+  if (data.length < 2) {
     return { success: false, imported: 0, skipped: 0, error: "File is empty or has no data rows." };
   }
 
-  // Detect delimiter and header index
-  let delimiter = ",";
+  // Detect header index
   let headerIndex = -1;
   let headers: string[] = [];
 
-  // Try to find the header row by looking for keywords in the first 20 lines
-  for (let i = 0; i < Math.min(lines.length, 20); i++) {
-    const line = lines[i];
-    // Check both common delimiters
-    const commaHeaders = line.split(",").map((h) => h.replace(/"/g, "").trim().toLowerCase());
-    const tabHeaders = line.split("\t").map((h) => h.replace(/"/g, "").trim().toLowerCase());
+  for (let i = 0; i < Math.min(data.length, 30); i++) {
+    const row = data[i];
+    if (!Array.isArray(row)) continue;
+    
+    const rowHeaders = row.map((h) => String(h || "").trim().toLowerCase());
 
     const isHeader = (h: string[]) => 
       (h.includes("symbol") || h.includes("item")) && 
       (h.includes("type") || h.includes("direction")) &&
       (h.includes("time") || h.includes("open") || h.includes("date"));
 
-    if (isHeader(commaHeaders)) {
-      delimiter = ",";
-      headers = commaHeaders;
-      headerIndex = i;
-      break;
-    } else if (isHeader(tabHeaders)) {
-      delimiter = "\t";
-      headers = tabHeaders;
+    if (isHeader(rowHeaders)) {
+      headers = rowHeaders;
       headerIndex = i;
       break;
     }
   }
 
   if (headerIndex === -1) {
-    // Fallback to first line if no header found, but usually this means it's not a valid MT4/MT5 report
-    const firstLineHeaders = lines[0].split(",").map((h) => h.replace(/"/g, "").trim().toLowerCase());
     return {
       success: false,
       imported: 0,
       skipped: 0,
-      error: `Could not detect required columns (Symbol, Type, Time). Found first line: ${firstLineHeaders.join(", ")}`,
+      error: "Could not detect required columns (Symbol, Type, Time). Please ensure you are using a standard MetaTrader report.",
     };
   }
 
@@ -124,34 +124,33 @@ export async function importTradesFromCSV(
 
   const parsedTrades: ParsedTrade[] = [];
 
-  for (let i = headerIndex + 1; i < lines.length; i++) {
-    const cols = lines[i].split(delimiter).map((c) => c.replace(/"/g, "").trim());
-    if (cols.length < 3) continue;
+  for (let i = headerIndex + 1; i < data.length; i++) {
+    const row = data[i];
+    if (!Array.isArray(row) || row.length < 3) continue;
 
-    const typeRaw = cols[typeCol]?.toLowerCase() || "";
-    // Skip non-trade rows (balance, credit, etc.)
+    const typeRaw = String(row[typeCol] || "").toLowerCase();
     if (!typeRaw.includes("buy") && !typeRaw.includes("sell")) continue;
 
     const type = typeRaw.includes("buy") ? "buy" : "sell";
-    const symbol = cols[symbolCol] || "";
+    const symbol = String(row[symbolCol] || "");
     if (!symbol) continue;
 
-    const ticket = ticketCol !== -1 ? cols[ticketCol] : `csv_${i}_${Date.now()}`;
-    const openTime = openTimeCol !== -1 ? parseDate(cols[openTimeCol]) : null;
+    const ticket = ticketCol !== -1 ? String(row[ticketCol]) : `file_${i}_${Date.now()}`;
+    const openTime = openTimeCol !== -1 ? parseDate(row[openTimeCol]) : null;
     if (!openTime) continue;
 
     parsedTrades.push({
-      externalTradeId: `csv_${ticket}`,
+      externalTradeId: `file_${ticket}`,
       symbol,
       type,
-      volume: volumeCol !== -1 ? parseNumber(cols[volumeCol]) : 0,
-      openPrice: parseNumber(cols[openPriceCol]),
-      closePrice: closePriceCol !== -1 ? parseNumber(cols[closePriceCol]) : null,
-      profit: profitCol !== -1 ? parseNumber(cols[profitCol]) : null,
-      commission: commissionCol !== -1 ? parseNumber(cols[commissionCol]) : null,
-      swap: swapCol !== -1 ? parseNumber(cols[swapCol]) : null,
+      volume: volumeCol !== -1 ? parseNumber(row[volumeCol]) : 0,
+      openPrice: parseNumber(row[openPriceCol]),
+      closePrice: closePriceCol !== -1 ? parseNumber(row[closePriceCol]) : null,
+      profit: profitCol !== -1 ? parseNumber(row[profitCol]) : null,
+      commission: commissionCol !== -1 ? parseNumber(row[commissionCol]) : null,
+      swap: swapCol !== -1 ? parseNumber(row[swapCol]) : null,
       openTime,
-      closeTime: closeTimeCol !== -1 ? parseDate(cols[closeTimeCol]) : null,
+      closeTime: closeTimeCol !== -1 ? parseDate(row[closeTimeCol]) : null,
     });
   }
 
@@ -159,7 +158,6 @@ export async function importTradesFromCSV(
     return { success: false, imported: 0, skipped: 0, error: "No valid buy/sell trades found in the file." };
   }
 
-  // Insert trades, skip duplicates
   let imported = 0;
   let skipped = 0;
 
@@ -198,4 +196,11 @@ export async function importTradesFromCSV(
   revalidatePath("/dashboard/performance");
 
   return { success: true, imported, skipped };
+}
+
+/**
+ * @deprecated Use importTradesFromFile instead for better binary support
+ */
+export async function importTradesFromCSV(accountId: string, csvContent: string) {
+  return importTradesFromFile(accountId, Buffer.from(csvContent).toString("base64"), "import.csv");
 }

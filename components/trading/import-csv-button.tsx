@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { importTradesFromCSV } from "@/app/actions/import-csv";
+import { importTradesFromFile } from "@/app/actions/import-csv";
 import { UploadCloud, FileText, CheckCircle2, AlertCircle, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,9 +19,10 @@ export function ImportCSVButton({ accounts }: ImportCSVButtonProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (file: File) => {
-    if (!file.name.endsWith(".csv") && !file.name.endsWith(".txt")) {
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (ext !== "csv" && ext !== "xlsx" && ext !== "xls" && ext !== "txt") {
       setStatus("error");
-      setResult({ imported: 0, skipped: 0, error: "Please upload a .csv or .txt file." });
+      setResult({ imported: 0, skipped: 0, error: "Please upload a .csv, .xlsx, or .txt file." });
       return;
     }
     setSelectedFile(file);
@@ -43,15 +44,19 @@ export function ImportCSVButton({ accounts }: ImportCSVButtonProps) {
     if (!selectedFile || !selectedAccount) return;
     setStatus("loading");
     try {
-      const text = await selectedFile.text();
-      const res = await importTradesFromCSV(selectedAccount, text);
-      if (res.success) {
-        setStatus("success");
-        setResult({ imported: res.imported, skipped: res.skipped });
-      } else {
-        setStatus("error");
-        setResult({ imported: 0, skipped: 0, error: res.error });
-      }
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = (e.target?.result as string).split(",")[1];
+        const res = await importTradesFromFile(selectedAccount, base64, selectedFile.name);
+        if (res.success) {
+          setStatus("success");
+          setResult({ imported: res.imported, skipped: res.skipped });
+        } else {
+          setStatus("error");
+          setResult({ imported: 0, skipped: 0, error: res.error });
+        }
+      };
+      reader.readAsDataURL(selectedFile);
     } catch {
       setStatus("error");
       setResult({ imported: 0, skipped: 0, error: "An unexpected error occurred." });
@@ -146,8 +151,8 @@ export function ImportCSVButton({ accounts }: ImportCSVButtonProps) {
               <>
                 <UploadCloud className="h-10 w-10 text-zinc-300" />
                 <div className="text-center">
-                  <p className="font-bold text-zinc-700 dark:text-zinc-300">Drop your CSV file here</p>
-                  <p className="text-xs text-zinc-400 mt-1">or click to browse — .csv or .txt supported</p>
+                  <p className="font-bold text-zinc-700 dark:text-zinc-300">Drop your CSV or XLSX file here</p>
+                  <p className="text-xs text-zinc-400 mt-1">or click to browse — .csv, .xlsx or .txt supported</p>
                 </div>
               </>
             )}
@@ -158,7 +163,7 @@ export function ImportCSVButton({ accounts }: ImportCSVButtonProps) {
             <p className="font-semibold text-zinc-700 dark:text-zinc-300 mb-2">How to export from MetaTrader:</p>
             <p>1. Open MT5 → Click the <strong>History</strong> tab at the bottom</p>
             <p>2. Right-click → <strong>Save as Report</strong></p>
-            <p>3. Change file type to <strong>.csv</strong> and save</p>
+            <p>3. Save the file (format can be <strong>.xlsx</strong> or <strong>.csv</strong>)</p>
             <p>4. Upload the file here</p>
           </div>
 
