@@ -15,27 +15,35 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        console.log("Authorize attempt for email:", credentials?.email);
         if (!credentials?.email || !credentials?.password) return null;
 
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, credentials.email as string));
+        try {
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, credentials.email as string));
 
-        if (!user || !user.password) return null;
+          console.log("User found in DB:", !!user);
+          if (!user || !user.password) return null;
 
-        const isValid = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        );
+          const isValid = await bcrypt.compare(
+            credentials.password as string,
+            user.password
+          );
 
-        if (!isValid) return null;
+          console.log("Password is valid:", isValid);
+          if (!isValid) return null;
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        };
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+          };
+        } catch (error) {
+          console.error("Authorize error:", error);
+          throw error;
+        }
       },
     }),
   ],
