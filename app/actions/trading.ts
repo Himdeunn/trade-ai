@@ -142,6 +142,14 @@ export async function requestAiAnalysis(accountId: string) {
   if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
   try {
+    // 0. Fetch account to get currency
+    const account = await db.query.tradingAccounts.findFirst({
+      where: eq(tradingAccounts.id, accountId),
+    });
+
+    if (!account) return { success: false, error: "Account not found" };
+    const currency = account.currency || "USD";
+
     // 1. Fetch recent trades for this account
     const recentTrades = await db.query.trades.findMany({
       where: eq(tradesTable.accountId, accountId),
@@ -154,7 +162,7 @@ export async function requestAiAnalysis(accountId: string) {
     }
 
     // 2. Run AI Analysis
-    const analysisText = await analyzeTradingPerformance(recentTrades);
+    const analysisText = await analyzeTradingPerformance(recentTrades, currency);
 
     if (analysisText.includes("Failed to generate")) {
       return { success: false, error: "AI service is currently unavailable. Please try again later." };

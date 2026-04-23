@@ -12,12 +12,12 @@ function getModel() {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function analyzeTradingPerformance(trades: any[]) {
+export async function analyzeTradingPerformance(trades: any[], currency: string = "USD") {
   if (!trades || trades.length === 0) {
-    return "Belum ada data trading untuk dianalisis. Mulai trading atau import history agar saya bisa memberikan insight! 🚀";
+    return "Belum ada data trading untuk dianalisis. Mulai trading agar saya bisa memberikan insight! 🚀";
   }
 
-  // Aggregate data for better AI context (similar to reference code style)
+  // Aggregate data for better AI context
   const totalProfit = trades.reduce((acc, t) => acc + (t.profit || 0), 0);
   const winRate = (trades.filter(t => (t.profit || 0) > 0).length / trades.length) * 100;
   
@@ -29,28 +29,27 @@ export async function analyzeTradingPerformance(trades: any[]) {
   }, {} as any);
 
   const statsString = Object.entries(symbolStats)
-    .map(([sym, data]: any) => `${sym}: ${data.count} trades (Net Profit: ${data.profit.toFixed(2)})`)
-    .join(" | ");
+    .map(([sym, data]: any) => `${sym}: ${data.count} trades (Net Profit: ${data.profit.toFixed(2)} ${currency})`)
+    .join(", ");
 
-  const prompt = `Halo! Saya adalah TradeAI Analyst. Berikut adalah data performa trading Anda:
-  - Ringkasan Statistik: ${trades.length} trades, Win Rate ${winRate.toFixed(1)}%, Profit/Loss ${totalProfit.toFixed(2)}
-  - Performa per Asset: [ ${statsString} ]
+  const prompt = `Halo! Saya adalah TradeAI Analyst. Berikut data performa Anda dalam mata uang ${currency}:
+  - Statistik: ${trades.length} trades, Win Rate ${winRate.toFixed(1)}%, Total Profit/Loss ${totalProfit.toFixed(2)} ${currency}
+  - Aset: ${statsString}
 
-  Sebagai pakar psikologi trading dari TradeAI, berikan analisis tajam mengenai pola trading saya dalam 2-3 kalimat yang sangat informatif. 
-  Setelah itu, berikan 2 tips 'God Tier' untuk meningkatkan profitabilitas di sesi berikutnya.
-  
-  Gunakan nada bicara yang antusias, profesional, dan memberikan semangat (seperti coach trading pribadi).
-  Format output wajib menggunakan **markdown tebal** pada istilah teknis dan angka penting.`;
+  Berikan satu paragraf rangkuman singkat (maksimal 3 kalimat) mengenai pola trading saya dan satu tips utama untuk kedepannya.
+  PENTING: Jangan gunakan format markdown seperti BOLD (**), ITALIC (*), atau simbol lainnya. Kirimkan dalam bentuk teks polos (plain text) saja agar mudah dibaca.
+  Gunakan nada bicara TradeAI Analyst yang profesional dan memberikan semangat.`;
 
   try {
     const model = getModel();
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    return response.text();
+    // Strip any residual markdown just in case
+    return response.text().replace(/[*_#`~]/g, "");
   } catch (error: any) {
     console.error("Gemini AI Analysis Error:", error);
     if (error.message?.includes("not found")) {
-      return "AI Model Error: Model 'gemini-1.5-flash' tidak ditemukan atau limit API tercapai. Hubungi support.";
+      return "AI Model Error: Layanan sedang sibuk. Hubungi support.";
     }
     return "Gagal sinkronisasi AI. Coba lagi nanti ya! 🙏";
   }
