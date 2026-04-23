@@ -5,6 +5,7 @@ import { desc, eq, and, like, count } from "drizzle-orm";
 import { cn } from "@/lib/utils";
 import { Filter, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { ImportCSVButton } from "@/components/trading/import-csv-button";
+import { HistoryFilters } from "@/components/trading/history-filters";
 import Link from "next/link";
 
 export default async function HistoryPage(props: {
@@ -61,7 +62,7 @@ export default async function HistoryPage(props: {
       })
     : [];
 
-  const accountsForImport = accounts.map((a) => ({
+  const accountsForFilters = accounts.map((a) => ({
     id: a.id,
     broker: a.broker,
     accountNumber: a.accountNumber,
@@ -77,74 +78,19 @@ export default async function HistoryPage(props: {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          {accountsForImport.length > 0 && (
-            <ImportCSVButton accounts={accountsForImport} />
+          {accountsForFilters.length > 0 && (
+            <ImportCSVButton accounts={accountsForFilters} />
           )}
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col md:flex-row gap-4 p-4 rounded-2xl bg-white border border-zinc-200 dark:bg-zinc-950 dark:border-zinc-800 shadow-sm">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-          <form className="w-full">
-            <input 
-              name="symbol"
-              defaultValue={symbolFilter}
-              placeholder="Search symbol (e.g. XAUUSD)..."
-              className="w-full pl-10 pr-4 py-2 text-sm rounded-xl border border-zinc-100 bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800 outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
-            {/* We need to preserve other params in the form if we were using traditional form submit, 
-                but for simplicity we'll just use a button or let users press enter */}
-            <input type="hidden" name="type" value={typeFilter} />
-            <input type="hidden" name="accountId" value={selectedAccountId} />
-          </form>
-        </div>
-        
-        <div className="flex gap-3">
-          <select 
-            value={selectedAccountId}
-            onChange={(e) => {
-              const url = new URL(window.location.href);
-              url.searchParams.set("accountId", e.target.value);
-              url.searchParams.set("page", "1");
-              window.location.href = url.toString();
-            }}
-            className="px-4 py-2 text-sm rounded-xl border border-zinc-100 bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800 outline-none"
-            style={{ display: 'none' }} // This select needs client-side, using links for now
-          />
-          
-          <div className="flex rounded-xl border border-zinc-100 bg-zinc-50 p-1 dark:bg-zinc-900 dark:border-zinc-800">
-            <Link 
-              href={`/dashboard/history?type=&symbol=${symbolFilter}&accountId=${selectedAccountId}`}
-              className={cn(
-                "px-3 py-1.5 text-xs font-bold rounded-lg transition-all",
-                !typeFilter ? "bg-white text-black shadow-sm dark:bg-zinc-800 dark:text-white" : "text-zinc-500"
-              )}
-            >
-              All
-            </Link>
-            <Link 
-              href={`/dashboard/history?type=buy&symbol=${symbolFilter}&accountId=${selectedAccountId}`}
-              className={cn(
-                "px-3 py-1.5 text-xs font-bold rounded-lg transition-all",
-                typeFilter === "buy" ? "bg-white text-blue-600 shadow-sm dark:bg-zinc-800" : "text-zinc-500"
-              )}
-            >
-              Buy
-            </Link>
-            <Link 
-              href={`/dashboard/history?type=sell&symbol=${symbolFilter}&accountId=${selectedAccountId}`}
-              className={cn(
-                "px-3 py-1.5 text-xs font-bold rounded-lg transition-all",
-                typeFilter === "sell" ? "bg-white text-rose-600 shadow-sm dark:bg-zinc-800" : "text-zinc-500"
-              )}
-            >
-              Sell
-            </Link>
-          </div>
-        </div>
-      </div>
+      <HistoryFilters 
+        accounts={accountsForFilters}
+        currentAccountId={selectedAccountId || ""}
+        currentSymbol={symbolFilter}
+        currentType={typeFilter}
+      />
 
       {allTrades.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center rounded-3xl border-2 border-dashed border-zinc-100 dark:border-zinc-900 bg-white/50 dark:bg-zinc-950/50">
