@@ -58,17 +58,19 @@ export default async function DashboardPage(props: {
   else if (range === "6M") dateFilter.setMonth(dateFilter.getMonth() - 6);
   else dateFilter = new Date(0);
 
-  // Fetch stats
-  const accountTrades = await db.query.trades.findMany({
-    where: and(
-      eq(trades.accountId, account.id),
-      gte(trades.openTime, dateFilter)
-    ),
+  // Fetch all trades for lifetime stats
+  const allAccountTrades = await db.query.trades.findMany({
+    where: eq(trades.accountId, account.id),
     orderBy: [desc(trades.openTime)],
   });
 
+  // Filter for selected range
+  const accountTrades = allAccountTrades.filter(t => t.openTime >= dateFilter);
+
   const totalTrades = accountTrades.length;
-  const totalProfit = accountTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
+  const lifetimeProfit = allAccountTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
+  const rangeProfit = accountTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
+  
   const winRate = accountTrades.length > 0 
     ? (accountTrades.filter(t => (t.profit || 0) > 0).length / accountTrades.length) * 100 
     : 0;
@@ -80,14 +82,23 @@ export default async function DashboardPage(props: {
   const grossLoss = Math.abs(losingTrades.reduce((acc, t) => acc + (t.profit || 0), 0));
   const profitFactor = grossLoss > 0 ? (grossProfit / grossLoss) : (grossProfit > 0 ? 100 : 0);
 
-  // Simple equity curve for chart
-  let currentBalance = account.balance || 0;
-  const chartData = [{ date: Date.now(), equity: currentBalance }];
-  accountTrades.slice(0, 15).forEach((t) => {
-    currentBalance -= (t.profit || 0);
+  // Growth calculation (Lifetime)
+  // If we don't have an initial deposit, we assume growth starts from the first trade's balance effect
+  // But for better UX, let's use the current balance and the lifetime profit to estimate starting point
+  const currentBalance = account.balance || lifetimeProfit; // Fallback if balance is 0
+  const startingBalance = currentBalance - lifetimeProfit;
+  const growthPercentage = startingBalance !== 0 
+    ? (lifetimeProfit / Math.abs(startingBalance)) * 100 
+    : (lifetimeProfit > 0 ? 100 : 0);
+
+  // Simple equity curve for chart (using all trades to show full history if possible, or just recent)
+  let runningBalance = currentBalance;
+  const chartData = [{ date: Date.now(), equity: runningBalance }];
+  allAccountTrades.slice(0, 30).forEach((t) => {
+    runningBalance -= (t.profit || 0);
     chartData.unshift({
       date: t.openTime.getTime(),
-      equity: currentBalance
+      equity: runningBalance
     });
   });
 
@@ -109,23 +120,23 @@ export default async function DashboardPage(props: {
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard 
-          title="Total Balance" 
-          value={formatCurrency(account.balance || 0, currency)} 
-          change={`${totalProfit >= 0 ? "+" : ""}${formatCurrency(totalProfit, currency)}`} 
-          trend={totalProfit >= 0 ? "up" : "down"} 
+          title="Account Balance" 
+          value={formatCurrency(currentBalance, currency)} 
+          change={`${rangeProfit >= 0 ? "+" : ""}${formatCurrency(rangeProfit, currency)} (Range)`} 
+          trend={rangeProfit >= 0 ? "up" : "down"} 
           iconName="wallet" 
         />
         <StatsCard 
-          title="Total Equity" 
-          value={formatCurrency(account.equity || 0, currency)} 
-          change={range}
-          trend="up" 
+          title="Growth (Lifetime)" 
+          value={`${growthPercentage >= 0 ? "+" : ""}${growthPercentage.toFixed(2)}%`} 
+          change={`${lifetimeProfit >= 0 ? "+" : ""}${formatCurrency(lifetimeProfit, currency)} Total`}
+          trend={lifetimeProfit >= 0 ? "up" : "down"} 
           iconName="trending" 
         />
         <StatsCard 
           title="Win Rate" 
           value={`${winRate.toFixed(1)}%`} 
-          change={`${totalTrades} Trades`} 
+          change={`${totalTrades} Trades (Range)`} 
           trend={winRate >= 50 ? "up" : "down"} 
           iconName="pie" 
         />

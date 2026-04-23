@@ -227,6 +227,20 @@ export async function importTradesFromFile(
     imported++;
   }
 
+  // Update account balance after import
+  const allTrades = await db.query.trades.findMany({
+    where: eq(trades.accountId, accountId),
+  });
+  
+  const totalHistoricalProfit = allTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
+  
+  await db.update(tradingAccounts)
+    .set({ 
+      balance: totalHistoricalProfit, // Assuming initial was 0, or we can add to existing
+      equity: totalHistoricalProfit 
+    })
+    .where(eq(tradingAccounts.id, accountId));
+
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/history");
   revalidatePath("/dashboard/performance");
