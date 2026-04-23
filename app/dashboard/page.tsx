@@ -16,6 +16,7 @@ import Link from "next/link";
 
 import { SyncButton } from "@/components/trading/sync-button";
 import { AiAnalysisButton } from "@/components/trading/ai-analysis-button";
+import { getCurrencySymbol, formatCurrency } from "@/lib/currency-utils";
 
 export default async function DashboardPage(props: {
   searchParams: Promise<{ range?: string }>;
@@ -90,6 +91,9 @@ export default async function DashboardPage(props: {
     });
   });
 
+  const currency = account.currency || "USD";
+  const symbol = getCurrencySymbol(currency);
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -106,14 +110,14 @@ export default async function DashboardPage(props: {
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard 
           title="Total Balance" 
-          value={`$${(account.balance || 0).toLocaleString()}`} 
-          change={`${totalProfit >= 0 ? "+" : ""}$${totalProfit.toFixed(2)}`} 
+          value={formatCurrency(account.balance || 0, currency)} 
+          change={`${totalProfit >= 0 ? "+" : ""}${formatCurrency(totalProfit, currency)}`} 
           trend={totalProfit >= 0 ? "up" : "down"} 
           iconName="wallet" 
         />
         <StatsCard 
           title="Total Equity" 
-          value={`$${(account.equity || 0).toLocaleString()}`} 
+          value={formatCurrency(account.equity || 0, currency)} 
           change={range}
           trend="up" 
           iconName="trending" 
@@ -169,7 +173,7 @@ export default async function DashboardPage(props: {
                       "text-sm font-bold",
                       (trade.profit || 0) > 0 ? "text-green-600" : "text-red-600"
                     )}>
-                      {(trade.profit || 0) > 0 ? "+" : ""}${trade.profit?.toFixed(2)}
+                      {(trade.profit || 0) > 0 ? "+" : ""}{formatCurrency(trade.profit || 0, currency)}
                     </p>
                     <p className="text-xs text-zinc-500">{trade.openTime.toLocaleDateString()}</p>
                   </div>

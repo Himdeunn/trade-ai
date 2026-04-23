@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Filter, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { ImportCSVButton } from "@/components/trading/import-csv-button";
 import { HistoryFilters } from "@/components/trading/history-filters";
+import { getCurrencySymbol, formatCurrency } from "@/lib/currency-utils";
 import Link from "next/link";
 
 export default async function HistoryPage(props: {
@@ -67,6 +68,8 @@ export default async function HistoryPage(props: {
     broker: a.broker,
     accountNumber: a.accountNumber,
   }));
+
+  const currency = account?.currency || "USD";
 
   return (
     <div className="space-y-6">
@@ -139,7 +142,7 @@ export default async function HistoryPage(props: {
                         "px-6 py-4 font-black font-mono",
                         (trade.profit || 0) > 0 ? "text-green-600" : (trade.profit || 0) < 0 ? "text-red-500" : "text-zinc-400"
                       )}>
-                        {(trade.profit || 0) > 0 ? "+" : ""}{trade.profit?.toFixed(2) || "0.00"}
+                        {(trade.profit || 0) > 0 ? "+" : ""}{formatCurrency(trade.profit || 0, currency)}
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-zinc-900 dark:text-zinc-300 font-medium whitespace-nowrap">
