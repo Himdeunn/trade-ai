@@ -157,7 +157,7 @@ export default async function DashboardPage(props: {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <PerformanceChart data={chartData} />
+          <PerformanceChart data={chartData} currency={currency} />
         </div>
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
           <h3 className="text-lg font-bold mb-4 text-black dark:text-white">Recent Trades</h3>
