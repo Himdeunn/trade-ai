@@ -57,15 +57,8 @@ export function Sidebar() {
           ))}
         </nav>
       </div>
-      <div className="p-4 mt-auto space-y-2">
+      <div className="p-4 mt-auto">
         <AddAccountDialog />
-        <button 
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
-        >
-          <LogOut className="h-5 w-5" />
-          Logout
-        </button>
       </div>
     </div>
   );

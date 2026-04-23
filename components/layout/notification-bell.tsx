@@ -107,7 +107,7 @@ export function NotificationBell() {
                 )}
               </div>
               
-              <div className="max-h-96 overflow-y-auto custom-scrollbar">
+              <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-800 scrollbar-track-transparent">
                 {notifications.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 text-center px-6">
                     <Bell className="h-8 w-8 text-zinc-200 mb-2" />
