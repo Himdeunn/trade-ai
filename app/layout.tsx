@@ -19,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-full flex flex-col bg-zinc-50 dark:bg-black`}>
+      <body className={`${inter.className} min-h-full flex flex-col bg-zinc-50 dark:bg-black`} suppressHydrationWarning>
         <AuthProvider>
           {children}
           <Toaster position="top-right" richColors />
