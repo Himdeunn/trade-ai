@@ -122,28 +122,28 @@ export default async function DashboardPage(props: {
         <StatsCard 
           title="Account Balance" 
           value={formatCurrency(currentBalance, currency)} 
-          change={`${rangeProfit >= 0 ? "+" : ""}${formatCurrency(rangeProfit, currency)} (Range)`} 
+          change={`${rangeProfit >= 0 ? "+" : ""}${formatCurrency(rangeProfit, currency)}`} 
           trend={rangeProfit >= 0 ? "up" : "down"} 
           iconName="wallet" 
         />
         <StatsCard 
           title="Growth (Lifetime)" 
-          value={`${growthPercentage >= 0 ? "+" : ""}${growthPercentage.toFixed(2)}%`} 
-          change={`${lifetimeProfit >= 0 ? "+" : ""}${formatCurrency(lifetimeProfit, currency)} Total`}
+          value={`${growthPercentage >= 0 ? "+" : ""}${growthPercentage.toFixed(1)}%`} 
+          change={`${lifetimeProfit >= 0 ? "+" : ""}${formatCurrency(lifetimeProfit, currency)}`}
           trend={lifetimeProfit >= 0 ? "up" : "down"} 
           iconName="trending" 
         />
         <StatsCard 
           title="Win Rate" 
           value={`${winRate.toFixed(1)}%`} 
-          change={`${totalTrades} Trades (Range)`} 
+          change={`${totalTrades} trades`} 
           trend={winRate >= 50 ? "up" : "down"} 
           iconName="pie" 
         />
         <StatsCard 
           title="Profit Factor" 
           value={profitFactor.toFixed(2)} 
-          change="Selected Range" 
+          change={range} 
           trend={profitFactor >= 1 ? "up" : "down"} 
           iconName="bar" 
         />

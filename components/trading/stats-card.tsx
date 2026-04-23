@@ -45,10 +45,12 @@ export function StatsCard({ title, value, change, trend, iconName }: StatsCardPr
         </div>
         {trend && (
           <div className={cn(
-            "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium",
-            trend === "up" ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+            "flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-tighter",
+            trend === "up" 
+              ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400" 
+              : "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
           )}>
-            {change}
+            {trend === "up" ? "▲" : "▼"} {change}
           </div>
         )}
       </div>
