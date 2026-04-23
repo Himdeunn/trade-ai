@@ -7,9 +7,30 @@ import { SecurityProgress } from "./security-progress";
 import { TwoFactorSetup } from "./two-factor-setup";
 import { NotificationSettings } from "./notification-settings";
 
+import { updateProfile } from "@/app/actions/user";
+import { toast } from "sonner";
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function ProfileFormClient({ user, initialSettings }: { user: any, initialSettings: any }) {
   const [avatar, setAvatar] = useState(user.avatar || "avatar-1");
+  const [isPending, setIsPending] = useState(false);
+
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsPending(true);
+    const formData = new FormData(e.currentTarget);
+    formData.append("avatar", avatar);
+    
+    const result = await updateProfile(formData);
+    if (result.success) {
+      toast.success("Profile updated successfully");
+    } else {
+      toast.error(result.error || "Failed to update profile");
+    }
+    setIsPending(false);
+  };
+
+  // ... (rest of logic)
 
   // Calculate security score
   let securityScore = 30; // Base score for account creation
@@ -61,11 +82,12 @@ export function ProfileFormClient({ user, initialSettings }: { user: any, initia
             <Mail className="h-5 w-5 text-blue-600" />
             <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400">General Information</h2>
           </div>
-          <form className="space-y-6">
+          <form onSubmit={handleSave} className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Username</label>
                 <input 
+                  name="name"
                   type="text" 
                   defaultValue={user.name || ""} 
                   className="w-full rounded-2xl border border-zinc-100 bg-zinc-50/50 px-4 py-3.5 text-sm font-bold focus:ring-2 focus:ring-blue-500/20 outline-none dark:border-zinc-900 dark:bg-zinc-900/50 dark:text-white transition-all" 
@@ -74,6 +96,7 @@ export function ProfileFormClient({ user, initialSettings }: { user: any, initia
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Full Name</label>
                 <input 
+                  name="fullName"
                   type="text" 
                   defaultValue={user.fullName || ""} 
                   placeholder="Enter your full name"
@@ -85,6 +108,7 @@ export function ProfileFormClient({ user, initialSettings }: { user: any, initia
                 <div className="relative">
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
                   <input 
+                    name="phoneNumber"
                     type="tel" 
                     defaultValue={user.phoneNumber || ""} 
                     placeholder="+62 812..."
@@ -102,8 +126,12 @@ export function ProfileFormClient({ user, initialSettings }: { user: any, initia
                 />
               </div>
             </div>
-            <button type="button" className="rounded-xl bg-blue-600 px-8 py-3.5 text-xs font-black uppercase tracking-widest text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
-              Save Profile Details
+            <button 
+              type="submit" 
+              disabled={isPending}
+              className="rounded-xl bg-blue-600 px-8 py-3.5 text-xs font-black uppercase tracking-widest text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
+            >
+              {isPending ? "Saving..." : "Save Profile Details"}
             </button>
           </form>
         </section>
