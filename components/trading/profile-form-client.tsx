@@ -90,6 +90,7 @@ export function ProfileFormClient({ user, initialSettings }: { user: any, initia
                   name="name"
                   type="text" 
                   defaultValue={user.name || ""} 
+                  suppressHydrationWarning
                   className="w-full rounded-2xl border border-zinc-100 bg-zinc-50/50 px-4 py-3.5 text-sm font-bold focus:ring-2 focus:ring-blue-500/20 outline-none dark:border-zinc-900 dark:bg-zinc-900/50 dark:text-white transition-all" 
                 />
               </div>
@@ -100,6 +101,7 @@ export function ProfileFormClient({ user, initialSettings }: { user: any, initia
                   type="text" 
                   defaultValue={user.fullName || ""} 
                   placeholder="Enter your full name"
+                  suppressHydrationWarning
                   className="w-full rounded-2xl border border-zinc-100 bg-zinc-50/50 px-4 py-3.5 text-sm font-bold focus:ring-2 focus:ring-blue-500/20 outline-none dark:border-zinc-900 dark:bg-zinc-900/50 dark:text-white transition-all" 
                 />
               </div>
@@ -112,6 +114,7 @@ export function ProfileFormClient({ user, initialSettings }: { user: any, initia
                     type="tel" 
                     defaultValue={user.phoneNumber || ""} 
                     placeholder="+62 812..."
+                    suppressHydrationWarning
                     className="w-full rounded-2xl border border-zinc-100 bg-zinc-50/50 pl-12 pr-4 py-3.5 text-sm font-bold focus:ring-2 focus:ring-blue-500/20 outline-none dark:border-zinc-900 dark:bg-zinc-900/50 dark:text-white transition-all" 
                   />
                 </div>
@@ -122,6 +125,7 @@ export function ProfileFormClient({ user, initialSettings }: { user: any, initia
                   type="email" 
                   defaultValue={user.email || ""} 
                   readOnly
+                  suppressHydrationWarning
                   className="w-full rounded-2xl border border-zinc-100 bg-zinc-100 px-4 py-3.5 text-sm font-bold text-zinc-500 outline-none dark:border-zinc-900 dark:bg-zinc-900/30" 
                 />
               </div>

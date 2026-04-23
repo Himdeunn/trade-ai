@@ -16,6 +16,7 @@ export function UserNav({ user }: { user: any }) {
     <div className="relative">
       <button 
         onClick={() => setIsOpen(!isOpen)}
+        suppressHydrationWarning
         className={cn(
           "flex items-center gap-3 rounded-2xl p-1.5 pr-3 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-900",
           isOpen && "bg-zinc-100 dark:bg-zinc-900"

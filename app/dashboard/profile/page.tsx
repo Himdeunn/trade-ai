@@ -28,11 +28,11 @@ export default async function ProfilePage() {
           <p className="text-zinc-500 dark:text-zinc-400 font-medium">Manage your personal identity and account security.</p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400 transition-all">
+          <button suppressHydrationWarning className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400 transition-all">
             <FileText className="h-4 w-4" />
             Terms
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400 transition-all">
+          <button suppressHydrationWarning className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400 transition-all">
             <ExternalLink className="h-4 w-4" />
             Privacy
           </button>
