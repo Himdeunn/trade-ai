@@ -118,12 +118,11 @@ export async function importTradesFromFile(
     if (!Array.isArray(row)) continue;
     
     const rowHeaders = row.map((h) => String(h || "").trim().toLowerCase());
-    const isHeader = (h: string[]) => 
-      (h.includes("symbol") || h.includes("item")) && 
-      (h.includes("type") || h.includes("direction")) &&
-      (h.includes("price") || h.includes("open price"));
+    const hasSymbol = rowHeaders.some(h => h.includes("symbol") || h.includes("item"));
+    const hasProfit = rowHeaders.some(h => h === "profit" || h === "profit/loss");
+    const hasType = rowHeaders.some(h => h.includes("type") || h.includes("direction"));
 
-    if (isHeader(rowHeaders)) {
+    if (hasSymbol && hasType && hasProfit) {
       headers = rowHeaders;
       headerIndex = i;
       break;
@@ -153,8 +152,8 @@ export async function importTradesFromFile(
   const typeCol = colIndex(["type", "direction"]);
   const volumeCol = colIndex(["volume", "size", "lots"]);
   
-  // Stricter profit detection to avoid "Balance" column
-  const profitCol = headers.findIndex(h => h === "profit" || h === "profit/loss" || (h.includes("profit") && !h.includes("factor") && !h.includes("total")));
+  // Stricter profit detection to avoid "Balance", "Profit Factor", or "Total Profit"
+  const profitCol = headers.findIndex(h => h === "profit" || h === "profit/loss");
   
   const ticketCol = colIndex(["ticket", "deal", "order", "#"]);
 
