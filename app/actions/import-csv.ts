@@ -165,28 +165,30 @@ export async function importTradesFromFile(
     if (!Array.isArray(row) || row.length < 3) continue;
 
     const typeRaw = String(row[typeCol] || "").toLowerCase();
-    if (!typeRaw.includes("buy") && !typeRaw.includes("sell")) continue;
+    const isTrade = typeRaw.includes("buy") || typeRaw.includes("sell");
+    const isBalanceOp = typeRaw.includes("balance") || typeRaw.includes("deposit") || typeRaw.includes("withdrawal");
+    
+    if (!isTrade && !isBalanceOp) continue;
 
-    const symbol = String(row[symbolCol] || "");
-    if (!symbol) continue;
-
+    const symbol = isTrade ? String(row[symbolCol] || "") : "BALANCE";
     const openTime = parseDate(row[openTimeCol]);
     if (!openTime) continue;
 
     const ticket = ticketCol !== -1 ? String(row[ticketCol]) : `f_${i}_${openTime.getTime()}`;
+    const profit = parseNumber(row[profitCol]);
 
     parsedTrades.push({
       externalTradeId: `file_${ticket}`,
       symbol,
-      type: typeRaw.includes("buy") ? "buy" : "sell",
-      volume: parseNumber(row[volumeCol]),
-      openPrice: parseNumber(row[openPriceCol]),
-      closePrice: closePriceCol !== -1 ? parseNumber(row[closePriceCol]) : null,
-      profit: parseNumber(row[profitCol]),
+      type: isTrade ? (typeRaw.includes("buy") ? "buy" : "sell") : (profit >= 0 ? "deposit" : "withdrawal"),
+      volume: isTrade ? parseNumber(row[volumeCol]) : 0,
+      openPrice: isTrade ? parseNumber(row[openPriceCol]) : 0,
+      closePrice: isTrade && closePriceCol !== -1 ? parseNumber(row[closePriceCol]) : null,
+      profit: profit,
       commission: parseNumber(row[colIndex(["commission"])]),
       swap: parseNumber(row[colIndex(["swap"])]),
       openTime,
-      closeTime: closeTimeCol !== -1 ? parseDate(row[closeTimeCol]) : null,
+      closeTime: isTrade && closeTimeCol !== -1 ? parseDate(row[closeTimeCol]) : null,
     });
   }
 

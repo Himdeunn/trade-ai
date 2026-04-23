@@ -58,44 +58,50 @@ export default async function DashboardPage(props: {
   else if (range === "6M") dateFilter.setMonth(dateFilter.getMonth() - 6);
   else dateFilter = new Date(0);
 
-  // Fetch all trades for lifetime stats
-  const allAccountTrades = await db.query.trades.findMany({
+  // Fetch all transactions for balance and lifetime stats
+  const allTransactions = await db.query.trades.findMany({
     where: eq(trades.accountId, account.id),
     orderBy: [desc(trades.openTime)],
   });
 
-  // Filter for selected range
+  // Filter only actual trades (buy/sell) for performance stats
+  const allAccountTrades = allTransactions.filter(t => t.type === "buy" || t.type === "sell");
+  
+  // Filter for selected range (trades only)
   const accountTrades = allAccountTrades.filter(t => t.openTime >= dateFilter);
 
   const totalTrades = accountTrades.length;
-  const lifetimeProfit = allAccountTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
-  const rangeProfit = accountTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
+  const lifetimeTradingProfit = allAccountTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
+  const rangeTradingProfit = accountTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
+  
+  // Total balance = Sum of ALL transactions (including deposits/withdrawals)
+  const calculatedBalance = allTransactions.reduce((acc, t) => acc + (t.profit || 0) + (t.commission || 0) + (t.swap || 0), 0);
   
   const winRate = accountTrades.length > 0 
     ? (accountTrades.filter(t => (t.profit || 0) > 0).length / accountTrades.length) * 100 
     : 0;
 
-  // Calculate profit factor for the selected range
+  // Calculate profit factor for the selected range (trades only)
   const winningTrades = accountTrades.filter(t => (t.profit || 0) > 0);
   const losingTrades = accountTrades.filter(t => (t.profit || 0) < 0);
   const grossProfit = winningTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
   const grossLoss = Math.abs(losingTrades.reduce((acc, t) => acc + (t.profit || 0), 0));
   const profitFactor = grossLoss > 0 ? (grossProfit / grossLoss) : (grossProfit > 0 ? 100 : 0);
 
-  // Growth calculation (Lifetime)
-  // If we don't have an initial deposit, we assume growth starts from the first trade's balance effect
-  // But for better UX, let's use the current balance and the lifetime profit to estimate starting point
-  const currentBalance = account.balance || lifetimeProfit; // Fallback if balance is 0
-  const startingBalance = currentBalance - lifetimeProfit;
-  const growthPercentage = startingBalance !== 0 
-    ? (lifetimeProfit / Math.abs(startingBalance)) * 100 
-    : (lifetimeProfit > 0 ? 100 : 0);
+  // Growth calculation (Lifetime Trading Profit / Total Deposits)
+  const totalDeposits = allTransactions
+    .filter(t => t.type === "deposit")
+    .reduce((acc, t) => acc + (t.profit || 0), 0);
+  
+  const growthPercentage = totalDeposits > 0 
+    ? (lifetimeTradingProfit / totalDeposits) * 100 
+    : (lifetimeTradingProfit > 0 ? 100 : 0);
 
-  // Simple equity curve for chart (using all trades to show full history if possible, or just recent)
-  let runningBalance = currentBalance;
+  // Simple equity curve for chart (using all transactions to show actual balance movement)
+  let runningBalance = calculatedBalance;
   const chartData = [{ date: Date.now(), equity: runningBalance }];
-  allAccountTrades.slice(0, 30).forEach((t) => {
-    runningBalance -= (t.profit || 0);
+  allTransactions.slice(0, 50).forEach((t) => {
+    runningBalance -= ((t.profit || 0) + (t.commission || 0) + (t.swap || 0));
     chartData.unshift({
       date: t.openTime.getTime(),
       equity: runningBalance
@@ -121,16 +127,16 @@ export default async function DashboardPage(props: {
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard 
           title="Account Balance" 
-          value={formatCurrency(currentBalance, currency)} 
-          change={`${rangeProfit >= 0 ? "+" : ""}${formatCurrency(rangeProfit, currency)}`} 
-          trend={rangeProfit >= 0 ? "up" : "down"} 
+          value={formatCurrency(calculatedBalance, currency)} 
+          change={`${rangeTradingProfit >= 0 ? "+" : ""}${formatCurrency(rangeTradingProfit, currency)}`} 
+          trend={rangeTradingProfit >= 0 ? "up" : "down"} 
           iconName="wallet" 
         />
         <StatsCard 
           title="Growth (Lifetime)" 
           value={`${growthPercentage >= 0 ? "+" : ""}${growthPercentage.toFixed(1)}%`} 
-          change={`${lifetimeProfit >= 0 ? "+" : ""}${formatCurrency(lifetimeProfit, currency)}`}
-          trend={lifetimeProfit >= 0 ? "up" : "down"} 
+          change={`${lifetimeTradingProfit >= 0 ? "+" : ""}${formatCurrency(lifetimeTradingProfit, currency)}`}
+          trend={lifetimeTradingProfit >= 0 ? "up" : "down"} 
           iconName="trending" 
         />
         <StatsCard 
