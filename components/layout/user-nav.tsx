@@ -21,8 +21,14 @@ export function UserNav({ user }: { user: any }) {
           isOpen && "bg-zinc-100 dark:bg-zinc-900"
         )}
       >
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center border-2 border-white dark:border-zinc-950 shadow-md">
-          <User className="h-6 w-6 text-white" />
+        <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center border-2 border-white dark:border-zinc-950 shadow-md overflow-hidden">
+          {user?.avatar ? (
+            <img src={`/avatars/${user.avatar}.png`} alt={user.name} className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+              <User className="h-5 w-5 text-white" />
+            </div>
+          )}
         </div>
         <div className="text-left hidden lg:block">
           <p className="text-xs font-black uppercase tracking-tight text-black dark:text-white leading-none mb-1">

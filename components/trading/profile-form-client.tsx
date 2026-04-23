@@ -144,7 +144,11 @@ export function ProfileFormClient({ user, initialSettings }: { user: any, initia
           </div>
           
           <div className="space-y-6">
-            <TwoFactorSetup isEnabled={!!user.twoFactorEnabled} />
+            <TwoFactorSetup 
+              isEnabled={!!user.twoFactorEnabled} 
+              email={user.email}
+              initialSecret={user.twoFactorSecret}
+            />
 
             <div className="flex items-center justify-between p-6 rounded-3xl border border-zinc-50 bg-zinc-50/30 dark:bg-zinc-900/20 dark:border-zinc-900">
               <div>

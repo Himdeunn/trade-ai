@@ -6,9 +6,14 @@ import { Shield, Key, Smartphone, ChevronRight, Check, Copy, AlertCircle } from 
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-export function TwoFactorSetup({ isEnabled }: { isEnabled: boolean }) {
+export function TwoFactorSetup({ isEnabled, email, initialSecret }: { isEnabled: boolean, email?: string, initialSecret?: string }) {
   const [step, setStep] = useState<'overview' | 'choice' | 'recovery' | 'authenticator'>('overview');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [secret] = useState(initialSecret || "JBSWY3DPEHPK3PXP"); // Example Base32 secret
+
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+    `otpauth://totp/TradeAI:${email || 'user'}?secret=${secret}&issuer=TradeAI`
+  )}`;
 
   const recoveryWords = [
     "alpha", "bravo", "charlie", "delta", "echo", "foxtrot", 
@@ -165,14 +170,17 @@ export function TwoFactorSetup({ isEnabled }: { isEnabled: boolean }) {
                   </div>
 
                   <div className="mx-auto h-48 w-48 bg-zinc-100 dark:bg-zinc-900 rounded-3xl flex items-center justify-center border-4 border-white dark:border-zinc-950 shadow-xl overflow-hidden p-4">
-                    <div className="h-full w-full bg-black dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-black font-black text-[8px] text-center p-2">
-                      [ AUTHENTICATOR QR PLACEHOLDER ]
-                    </div>
+                    <img src={qrCodeUrl} alt="2FA QR Code" className="h-full w-full" />
                   </div>
 
                   <div className="bg-zinc-50 dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                    <code className="text-xs font-black text-blue-600 font-mono tracking-tighter">ABCD-EFGH-IJKL-MNOP</code>
-                    <button onClick={() => toast.success("Code copied")} className="text-zinc-400 hover:text-blue-600"><Copy className="h-4 w-4" /></button>
+                    <code className="text-xs font-black text-blue-600 font-mono tracking-tighter">{secret}</code>
+                    <button onClick={() => {
+                      navigator.clipboard.writeText(secret);
+                      toast.success("Code copied");
+                    }} className="text-zinc-400 hover:text-blue-600">
+                      <Copy className="h-4 w-4" />
+                    </button>
                   </div>
 
                   <button 
