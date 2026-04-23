@@ -12,11 +12,16 @@ export async function getNotifications() {
 
   const userId = session.user.id as string;
 
-  return await db.query.notifications.findMany({
-    where: (table, { eq }) => eq(table.userId, userId),
-    orderBy: [desc(notifications.createdAt)],
-    limit: 50,
-  });
+  try {
+    return await db.query.notifications.findMany({
+      where: (table, { eq }) => eq(table.userId, userId),
+      orderBy: [desc(notifications.createdAt)],
+      limit: 50,
+    });
+  } catch (error) {
+    console.error("getNotifications Error:", error);
+    return [];
+  }
 }
 
 export async function markAsRead(notificationId: string) {
@@ -25,14 +30,18 @@ export async function markAsRead(notificationId: string) {
 
   const userId = session.user.id as string;
 
-  await db.update(notifications)
-    .set({ isRead: 1 })
-    .where(and(
-      eq(notifications.id, notificationId),
-      eq(notifications.userId, userId)
-    ));
+  try {
+    await db.update(notifications)
+      .set({ isRead: 1 })
+      .where(and(
+        eq(notifications.id, notificationId),
+        eq(notifications.userId, userId)
+      ));
 
-  revalidatePath("/dashboard/notifications");
+    revalidatePath("/dashboard/notifications");
+  } catch (error) {
+    console.error("markAsRead Error:", error);
+  }
 }
 
 export async function markAllAsRead() {
@@ -41,11 +50,15 @@ export async function markAllAsRead() {
 
   const userId = session.user.id as string;
 
-  await db.update(notifications)
-    .set({ isRead: 1 })
-    .where(eq(notifications.userId, userId));
+  try {
+    await db.update(notifications)
+      .set({ isRead: 1 })
+      .where(eq(notifications.userId, userId));
 
-  revalidatePath("/dashboard/notifications");
+    revalidatePath("/dashboard/notifications");
+  } catch (error) {
+    console.error("markAllAsRead Error:", error);
+  }
 }
 
 export async function updateNotificationSettings(settings: {
@@ -59,12 +72,17 @@ export async function updateNotificationSettings(settings: {
 
   const userId = session.user.id as string;
 
-  await db.update(users)
-    .set(settings)
-    .where(eq(users.id, userId));
+  try {
+    await db.update(users)
+      .set(settings)
+      .where(eq(users.id, userId));
 
-  revalidatePath("/dashboard/settings");
-  return { success: true };
+    revalidatePath("/dashboard/settings");
+    return { success: true };
+  } catch (error) {
+    console.error("updateNotificationSettings Error:", error);
+    return { success: false, error: "Database connection failed" };
+  }
 }
 
 // Utility to create notification (can be used in background)
@@ -79,10 +97,14 @@ export async function createNotification({
   message: string;
   type?: "info" | "success" | "warning" | "error";
 }) {
-  await db.insert(notifications).values({
-    userId,
-    title,
-    message,
-    type,
-  });
+  try {
+    await db.insert(notifications).values({
+      userId,
+      title,
+      message,
+      type,
+    });
+  } catch (error) {
+    console.error("createNotification Error:", error);
+  }
 }
