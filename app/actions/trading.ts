@@ -162,9 +162,6 @@ export async function requestAiAnalysis(accountId: string) {
     }
 
     // 2. Run AI Analysis
-    const analysisText = await analyzeTradingPerformance(recentTrades, currency);
-
-    if (analysisText.includes("Failed to generate")) {
     const analysis = await analyzeTradingPerformance(recentTrades, currency);
 
     if (analysis.includes("Failed to generate")) {
