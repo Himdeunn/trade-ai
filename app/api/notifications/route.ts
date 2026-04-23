@@ -17,6 +17,8 @@ export async function GET() {
 
     return NextResponse.json(data);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
+    console.error("Notifications API Error:", error);
+    // Return empty array instead of 500 to prevent UI crashes during DB hiccups
+    return NextResponse.json([]);
   }
 }
