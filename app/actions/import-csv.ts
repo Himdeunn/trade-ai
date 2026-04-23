@@ -255,13 +255,21 @@ export async function importTradesFromFile(
   });
   
   const totalHistoricalProfit = allTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
-  
+  const balance = totalHistoricalProfit;
+  const equity = totalHistoricalProfit;
+
   await db.update(tradingAccounts)
-    .set({ 
-      balance: totalHistoricalProfit, // Assuming initial was 0, or we can add to existing
-      equity: totalHistoricalProfit 
-    })
+    .set({ balance, equity })
     .where(eq(tradingAccounts.id, accountId));
+
+  // Create notification
+  const { createNotification } = await import("@/lib/notifications");
+  await createNotification({
+    userId: account.userId,
+    title: "Sync Successful",
+    message: `Successfully imported ${imported} transactions and updated your balance.`,
+    type: "success",
+  });
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/history");

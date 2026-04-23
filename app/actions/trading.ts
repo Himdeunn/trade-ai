@@ -165,14 +165,26 @@ export async function requestAiAnalysis(accountId: string) {
     const analysisText = await analyzeTradingPerformance(recentTrades, currency);
 
     if (analysisText.includes("Failed to generate")) {
+    const analysis = await analyzeTradingPerformance(recentTrades, currency);
+
+    if (analysis.includes("Failed to generate")) {
       return { success: false, error: "AI service is currently unavailable. Please try again later." };
     }
 
     // 3. Save to DB
     await db.insert(aiAnalyses).values({
       accountId,
-      content: analysisText,
-      category: "Performance Review",
+      content: analysis,
+      category: "Performance Summary",
+    });
+
+    // Create notification
+    const { createNotification } = await import("@/lib/notifications");
+    await createNotification({
+      userId: session.user.id as string,
+      title: "AI Analysis Ready",
+      message: "Your trading performance analysis has been generated. Check it out now!",
+      type: "info",
     });
 
     revalidatePath("/dashboard");
