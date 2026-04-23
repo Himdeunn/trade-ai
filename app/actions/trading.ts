@@ -182,3 +182,27 @@ export async function requestAiAnalysis(accountId: string) {
     return { success: false, error: "An error occurred during analysis." };
   }
 }
+
+export async function clearAccountHistory(accountId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+
+  try {
+    await db.delete(tradesTable).where(eq(tradesTable.accountId, accountId));
+    
+    // Reset balance/equity
+    await db.update(tradingAccounts)
+      .set({ balance: 0, equity: 0 })
+      .where(and(
+        eq(tradingAccounts.id, accountId),
+        eq(tradingAccounts.userId, session.user.id as string)
+      ));
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/history");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Clear History Error:", error);
+    return { success: false, error: error.message };
+  }
+}

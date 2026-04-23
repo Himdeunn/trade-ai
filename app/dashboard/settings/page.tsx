@@ -8,6 +8,7 @@ import { deleteTradingAccount } from "@/app/actions/trading";
 import { CopyButton } from "@/components/ui/copy-button";
 import { NotificationSettings } from "@/components/trading/notification-settings";
 import { CurrencySelector } from "@/components/trading/currency-selector";
+import { ClearHistoryButton } from "@/components/trading/clear-history-button";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -104,6 +105,8 @@ export default async function SettingsPage() {
                           <CopyButton text={account.apiKey} />
                           <div className="h-4 w-[1px] bg-zinc-200 dark:bg-zinc-800 mx-1" />
                           <CurrencySelector accountId={account.id} currentCurrency={account.currency || "USD"} />
+                          <div className="h-4 w-[1px] bg-zinc-200 dark:bg-zinc-800 mx-1" />
+                          <ClearHistoryButton accountId={account.id} />
                         </div>
                       </div>
                     </div>

@@ -55,7 +55,24 @@ function parseDate(val: any): Date | null {
 function parseNumber(val: any): number {
   if (val === undefined || val === null || val === "") return 0;
   if (typeof val === "number") return val;
-  const cleaned = String(val).replace(/[^0-9.-]/g, "").trim();
+  
+  let str = String(val).trim();
+  
+  // Handle formats like "1.267.122,45" (IDR/European)
+  // If there are dots and a comma at the end, it's IDR style
+  if (str.includes(".") && str.includes(",")) {
+    str = str.replace(/\./g, "").replace(",", ".");
+  } 
+  // Handle formats like "1,267,122.45" (US style)
+  else if (str.includes(",") && str.includes(".")) {
+    str = str.replace(/,/g, "");
+  }
+  // Handle formats like "1267122,45" (No thousands sep, comma decimal)
+  else if (str.includes(",") && !str.includes(".")) {
+    str = str.replace(",", ".");
+  }
+
+  const cleaned = str.replace(/[^0-9.-]/g, "");
   return parseFloat(cleaned) || 0;
 }
 
@@ -135,7 +152,10 @@ export async function importTradesFromFile(
   const symbolCol = colIndex(["symbol", "item", "pair"]);
   const typeCol = colIndex(["type", "direction"]);
   const volumeCol = colIndex(["volume", "size", "lots"]);
-  const profitCol = colIndex(["profit"]);
+  
+  // Stricter profit detection to avoid "Balance" column
+  const profitCol = headers.findIndex(h => h === "profit" || h === "profit/loss" || (h.includes("profit") && !h.includes("factor") && !h.includes("total")));
+  
   const ticketCol = colIndex(["ticket", "deal", "order", "#"]);
 
   // Open/Close specific detection
