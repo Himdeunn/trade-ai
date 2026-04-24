@@ -13,7 +13,7 @@ export default async function AccountPage() {
   const session = await auth();
   if (!session?.user?.id) return null;
 
-  const userId = session.user.id as string;
+  const userId = session!.user!.id as string;
   const accounts = await db.query.tradingAccounts.findMany({
     where: (table, { eq }) => eq(table.userId, userId),
   });

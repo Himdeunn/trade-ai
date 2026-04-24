@@ -15,8 +15,10 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  const userId = session.user.id as string;
+
   const user = await db.query.users.findFirst({
-    where: (table, { eq }) => eq(table.id, session.user.id as string),
+    where: (table, { eq }) => eq(table.id, userId),
   });
 
   return (

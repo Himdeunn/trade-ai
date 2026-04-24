@@ -9,7 +9,7 @@ export default async function AIPage() {
   const session = await auth();
   if (!session?.user?.id) return null;
 
-  const userId = session.user.id as string;
+  const userId = session!.user!.id as string;
   const account = await db.query.tradingAccounts.findFirst({
     where: (table, { eq }) => eq(table.userId, userId),
   });

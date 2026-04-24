@@ -21,7 +21,7 @@ export default async function HistoryPage(props: {
   const session = await auth();
   if (!session?.user?.id) return null;
 
-  const userId = session.user.id as string;
+  const userId = session!.user!.id as string;
   const page = parseInt(searchParams.page || "1");
   const limit = 20;
   const offset = (page - 1) * limit;

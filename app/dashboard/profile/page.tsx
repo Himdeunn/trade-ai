@@ -8,7 +8,7 @@ export default async function ProfilePage() {
   if (!session?.user?.id) return null;
 
   const user = await db.query.users.findFirst({
-    where: (table, { eq }) => eq(table.id, session.user.id as string),
+    where: (table, { eq }) => eq(table.id, session!.user!.id as string),
   });
 
   if (!user) return null;

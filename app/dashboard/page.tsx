@@ -29,7 +29,7 @@ export default async function DashboardPage(props: {
   }
 
   const range = searchParams.range || "1M";
-  const userId = session.user.id as string;
+  const userId = session!.user!.id as string;
   const account = await db.query.tradingAccounts.findFirst({
     where: (table, { eq }) => eq(table.userId, userId),
   });
@@ -116,7 +116,7 @@ export default async function DashboardPage(props: {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-black dark:text-white">Dashboard Overview</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">Welcome back, {session.user.name}. Here&apos;s what&apos;s happening with your trading.</p>
+          <p className="text-zinc-500 dark:text-zinc-400">Welcome back, {session!.user!.name}. Here&apos;s what&apos;s happening with your trading.</p>
         </div>
         <div className="flex items-center gap-3">
           <AiAnalysisButton accountId={account.id} />

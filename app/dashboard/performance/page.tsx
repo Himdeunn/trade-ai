@@ -15,7 +15,7 @@ export default async function PerformancePage(props: {
   if (!session?.user?.id) return null;
 
   const range = searchParams.range || "1M";
-  const userId = session.user.id as string;
+  const userId = session!.user!.id as string;
   const account = await db.query.tradingAccounts.findFirst({
     where: (table, { eq }) => eq(table.userId, userId),
   });
