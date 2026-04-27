@@ -82,7 +82,7 @@ export default function SignupPage() {
           <button 
             type="submit"
             disabled={isPending}
-            className="w-full mt-6 flex items-center justify-center gap-2 rounded-xl bg-black py-4 font-bold text-white transition-all hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200 disabled:opacity-50"
+            className="w-full mt-6 button-premium button-primary flex items-center justify-center gap-2"
           >
             {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : (
               <>

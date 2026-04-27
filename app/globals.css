@@ -41,3 +41,27 @@ html, body {
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
 }
+
+@layer components {
+  .button-premium {
+    @apply relative overflow-hidden rounded-2xl px-8 py-4 font-black uppercase tracking-widest text-[10px] transition-all duration-500 active:scale-95;
+  }
+  
+  .button-primary {
+    @apply bg-blue-600 text-white shadow-xl shadow-blue-600/20 hover:bg-blue-700 hover:shadow-blue-600/40;
+  }
+  
+  .button-secondary {
+    @apply border border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-900;
+  }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
