@@ -72,9 +72,9 @@ export default function LandingPage() {
           <Link href="/signup" className="button-premium button-primary flex items-center gap-3 py-5 px-10 text-xs">
             Start Free Trial <ArrowRight className="h-4 w-4" />
           </Link>
-          <button className="button-premium button-secondary py-5 px-10 text-xs">
+          <Link href="/login" className="button-premium button-secondary py-5 px-10 text-xs">
             View Live Demo
-          </button>
+          </Link>
         </motion.div>
 
         {/* Decorative elements */}
