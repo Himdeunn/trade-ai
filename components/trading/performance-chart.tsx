@@ -87,8 +87,8 @@ export function PerformanceChart({ data, currency = "USD" }: { data: any[], curr
             <AreaChart data={data}>
               <defs>
                 <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#7B2CBF" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#7B2CBF" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#88888822" />
@@ -115,7 +115,7 @@ export function PerformanceChart({ data, currency = "USD" }: { data: any[], curr
               <Area
                 type="monotone"
                 dataKey="equity"
-                stroke="#3b82f6"
+                stroke="#7B2CBF"
                 strokeWidth={3}
                 fillOpacity={1}
                 fill="url(#colorProfit)"
