@@ -18,17 +18,66 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   
-  /* Vivid Nightfall Palette */
-  --color-blue-50: #E0AAFF;
+  /* Vivid Nightfall Palette mapped to ALL color scales */
+  --color-blue-50: #FBF9FF;
   --color-blue-100: #E0AAFF;
   --color-blue-200: #C77DFF;
-  --color-blue-300: #C77DFF;
-  --color-blue-400: #9D4EDD;
-  --color-blue-500: #7B2CBF;
-  --color-blue-600: #5A189A;
-  --color-blue-700: #3C096C;
-  --color-blue-800: #240046;
+  --color-blue-300: #9D4EDD;
+  --color-blue-400: #7B2CBF;
+  --color-blue-500: #5A189A;
+  --color-blue-600: #3C096C;
+  --color-blue-700: #240046;
+  --color-blue-800: #10002B;
   --color-blue-900: #10002B;
+  --color-blue-950: #080015;
+
+  --color-zinc-50: #FBF9FF;
+  --color-zinc-100: #E0AAFF;
+  --color-zinc-200: #C77DFF;
+  --color-zinc-300: #9D4EDD;
+  --color-zinc-400: #7B2CBF;
+  --color-zinc-500: #5A189A;
+  --color-zinc-600: #3C096C;
+  --color-zinc-700: #240046;
+  --color-zinc-800: #10002B;
+  --color-zinc-900: #10002B;
+  --color-zinc-950: #080015;
+
+  --color-neutral-50: #FBF9FF;
+  --color-neutral-100: #E0AAFF;
+  --color-neutral-200: #C77DFF;
+  --color-neutral-300: #9D4EDD;
+  --color-neutral-400: #7B2CBF;
+  --color-neutral-500: #5A189A;
+  --color-neutral-600: #3C096C;
+  --color-neutral-700: #240046;
+  --color-neutral-800: #10002B;
+  --color-neutral-900: #10002B;
+  --color-neutral-950: #080015;
+
+  --color-slate-50: #FBF9FF;
+  --color-slate-100: #E0AAFF;
+  --color-slate-200: #C77DFF;
+  --color-slate-300: #9D4EDD;
+  --color-slate-400: #7B2CBF;
+  --color-slate-500: #5A189A;
+  --color-slate-600: #3C096C;
+  --color-slate-700: #240046;
+  --color-slate-800: #10002B;
+  --color-slate-900: #10002B;
+  --color-slate-950: #080015;
+
+  --color-gray-50: #FBF9FF;
+  --color-gray-100: #E0AAFF;
+  --color-gray-200: #C77DFF;
+  --color-gray-300: #9D4EDD;
+  --color-gray-400: #7B2CBF;
+  --color-gray-500: #5A189A;
+  --color-gray-600: #3C096C;
+  --color-gray-700: #240046;
+  --color-gray-800: #10002B;
+  --color-gray-900: #10002B;
+  --color-gray-950: #080015;
 }
 
 body {
