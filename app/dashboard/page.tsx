@@ -17,9 +17,10 @@ import Link from "next/link";
 import { SyncButton } from "@/components/trading/sync-button";
 import { AiAnalysisButton } from "@/components/trading/ai-analysis-button";
 import { getCurrencySymbol, formatCurrency } from "@/lib/currency-utils";
+import { DashboardAccountSelector } from "@/components/trading/dashboard-account-selector";
 
 export default async function DashboardPage(props: {
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; accountId?: string }>;
 }) {
   const searchParams = await props.searchParams;
   const session = await auth();
@@ -30,9 +31,13 @@ export default async function DashboardPage(props: {
 
   const range = searchParams.range || "1M";
   const userId = session!.user!.id as string;
-  const account = await db.query.tradingAccounts.findFirst({
+  
+  const accounts = await db.query.tradingAccounts.findMany({
     where: (table, { eq }) => eq(table.userId, userId),
   });
+
+  const selectedAccountId = searchParams.accountId || accounts[0]?.id;
+  const account = accounts.find(a => a.id === selectedAccountId);
 
   if (!account) {
     return (
@@ -44,7 +49,7 @@ export default async function DashboardPage(props: {
         <p className="text-zinc-500 dark:text-zinc-400 max-w-md mb-10 text-lg">
           Connect your MetaTrader account via MetaApi to start tracking your performance automatically.
         </p>
-        <Link href="/dashboard/settings" className="bg-black dark:bg-white text-white dark:text-black px-10 py-4 rounded-2xl font-bold text-lg hover:scale-105 transition-transform shadow-xl">
+        <Link href="/dashboard/account" className="bg-black dark:bg-white text-white dark:text-black px-10 py-4 rounded-2xl font-bold text-lg hover:scale-105 transition-transform shadow-xl">
           Link Account Now
         </Link>
       </div>
@@ -64,49 +69,82 @@ export default async function DashboardPage(props: {
     orderBy: [desc(trades.openTime)],
   });
 
-  // Filter only actual trades (buy/sell) for performance stats
+  // 1. Identify the balance record
+  const balanceRecord = allTransactions.find(t => t.type === "balance");
+  const initialBalance = balanceRecord ? (balanceRecord.openPrice || 0) : 10000;
+
+  // 2. Filter actual trades (buy/sell) for performance stats
   const allAccountTrades = allTransactions.filter(t => t.type === "buy" || t.type === "sell");
   
-  // Filter for selected range (trades only)
+  // 3. Filter for selected range (trades only)
   const accountTrades = allAccountTrades.filter(t => t.openTime >= dateFilter);
 
   const totalTrades = accountTrades.length;
-  const lifetimeTradingProfit = allAccountTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
-  const rangeTradingProfit = accountTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
   
-  // Total balance = Sum of ALL transactions (including deposits/withdrawals)
-  const calculatedBalance = allTransactions.reduce((acc, t) => acc + (t.profit || 0) + (t.commission || 0) + (t.swap || 0), 0);
+  // Calculate Net P&L (profit + commission + swap)
+  const lifetimeTradingProfit = allAccountTrades.reduce((acc, t) => 
+    acc + (t.profit || 0) + (t.commission || 0) + (t.swap || 0), 0);
+    
+  const rangeTradingProfit = accountTrades.reduce((acc, t) => 
+    acc + (t.profit || 0) + (t.commission || 0) + (t.swap || 0), 0);
   
+  // Calculate current balance
+  const calculatedBalance = allTransactions.length > 0 
+    ? (initialBalance + lifetimeTradingProfit) 
+    : (account.balance || 0);
+  
+  // Win Rate based on Net Profit per trade
+  const winningTradesCount = accountTrades.filter(t => 
+    ((t.profit || 0) + (t.commission || 0) + (t.swap || 0)) > 0).length;
   const winRate = accountTrades.length > 0 
-    ? (accountTrades.filter(t => (t.profit || 0) > 0).length / accountTrades.length) * 100 
+    ? (winningTradesCount / accountTrades.length) * 100 
     : 0;
 
-  // Calculate profit factor for the selected range (trades only)
-  const winningTrades = accountTrades.filter(t => (t.profit || 0) > 0);
-  const losingTrades = accountTrades.filter(t => (t.profit || 0) < 0);
-  const grossProfit = winningTrades.reduce((acc, t) => acc + (t.profit || 0), 0);
-  const grossLoss = Math.abs(losingTrades.reduce((acc, t) => acc + (t.profit || 0), 0));
+  // Calculate profit factor for the selected range
+  const winningTrades = accountTrades.filter(t => ((t.profit || 0) + (t.commission || 0) + (t.swap || 0)) > 0);
+  const losingTrades = accountTrades.filter(t => ((t.profit || 0) + (t.commission || 0) + (t.swap || 0)) < 0);
+  
+  const grossProfit = winningTrades.reduce((acc, t) => 
+    acc + (t.profit || 0) + (t.commission || 0) + (t.swap || 0), 0);
+  const grossLoss = Math.abs(losingTrades.reduce((acc, t) => 
+    acc + (t.profit || 0) + (t.commission || 0) + (t.swap || 0), 0));
+    
   const profitFactor = grossLoss > 0 ? (grossProfit / grossLoss) : (grossProfit > 0 ? 100 : 0);
 
-  // Growth calculation (Lifetime Trading Profit / Total Deposits)
-  const totalDeposits = allTransactions
-    .filter(t => t.type === "deposit")
-    .reduce((acc, t) => acc + (t.profit || 0), 0);
-  
-  const growthPercentage = totalDeposits > 0 
-    ? (lifetimeTradingProfit / totalDeposits) * 100 
+  // Growth calculation (Lifetime Trading Profit / Initial Balance)
+  const growthPercentage = initialBalance > 0 
+    ? (lifetimeTradingProfit / initialBalance) * 100 
     : (lifetimeTradingProfit > 0 ? 100 : 0);
 
-  // Simple equity curve for chart (using all transactions to show actual balance movement)
-  let runningBalance = calculatedBalance;
-  const chartData = [{ date: Date.now(), equity: runningBalance }];
-  allTransactions.slice(0, 50).forEach((t) => {
-    runningBalance -= ((t.profit || 0) + (t.commission || 0) + (t.swap || 0));
-    chartData.unshift({
-      date: t.openTime.getTime(),
+  // Simple equity curve for chart (going FORWARDS from initialBalance)
+  const chronologicalTrades = [...allAccountTrades].sort((a, b) => a.openTime.getTime() - b.openTime.getTime());
+  
+  let runningBalance = initialBalance;
+  const chartData = [];
+  
+  if (balanceRecord) {
+    chartData.push({
+      date: balanceRecord.openTime.getTime(),
+      equity: runningBalance
+    });
+  } else if (chronologicalTrades.length > 0) {
+    chartData.push({
+      date: chronologicalTrades[0].openTime.getTime() - 1000,
+      equity: runningBalance
+    });
+  }
+
+  chronologicalTrades.forEach((t) => {
+    runningBalance += ((t.profit || 0) + (t.commission || 0) + (t.swap || 0));
+    chartData.push({
+      date: (t.closeTime || t.openTime).getTime(),
       equity: runningBalance
     });
   });
+
+  if (chartData.length === 0) {
+    chartData.push({ date: Date.now(), equity: calculatedBalance });
+  }
 
   const currency = account.currency || "USD";
   const symbol = getCurrencySymbol(currency);
@@ -119,6 +157,7 @@ export default async function DashboardPage(props: {
           <p className="text-zinc-500 dark:text-zinc-400">Welcome back, {session!.user!.name}. Here&apos;s what&apos;s happening with your trading.</p>
         </div>
         <div className="flex items-center gap-3">
+          <DashboardAccountSelector accounts={accounts} currentAccountId={selectedAccountId || ""} />
           <AiAnalysisButton accountId={account.id} />
           <SyncButton />
         </div>

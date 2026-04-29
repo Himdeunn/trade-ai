@@ -5,6 +5,7 @@ import {
   integer,
   doublePrecision,
   uuid,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
@@ -51,7 +52,7 @@ export const trades = pgTable("trades", {
     .notNull(),
   externalTradeId: text("external_trade_id").notNull(),
   symbol: text("symbol").notNull(),
-  type: text("type").notNull(), // 'buy', 'sell'
+  type: text("type").notNull(), // 'buy', 'sell', 'balance'
   volume: doublePrecision("volume").notNull(),
   openPrice: doublePrecision("open_price").notNull(),
   closePrice: doublePrecision("close_price"),
@@ -61,7 +62,10 @@ export const trades = pgTable("trades", {
   openTime: timestamp("open_time").notNull(),
   closeTime: timestamp("close_time"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  uniqAccountExternal: uniqueIndex('uq_trades_ext_account')
+    .on(table.accountId, table.externalTradeId),
+}));
 
 export const aiAnalyses = pgTable("ai_analyses", {
   id: uuid("id").defaultRandom().primaryKey(),

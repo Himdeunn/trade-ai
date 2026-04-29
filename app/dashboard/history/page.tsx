@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { trades, tradingAccounts } from "@/lib/db/schema";
 import { desc, eq, and, like, count } from "drizzle-orm";
 import { cn } from "@/lib/utils";
-import { Filter, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Filter, ChevronLeft, ChevronRight, Search, Wallet } from "lucide-react";
 import { ImportCSVButton } from "@/components/trading/import-csv-button";
 import { HistoryFilters } from "@/components/trading/history-filters";
 import { getCurrencySymbol, formatCurrency } from "@/lib/currency-utils";
@@ -31,6 +31,23 @@ export default async function HistoryPage(props: {
   const accounts = await db.query.tradingAccounts.findMany({
     where: (table, { eq }) => eq(table.userId, userId),
   });
+
+  if (accounts.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+        <div className="bg-zinc-100 dark:bg-zinc-900 p-8 rounded-3xl mb-8">
+          <Wallet className="h-16 w-16 text-zinc-400" />
+        </div>
+        <h2 className="text-3xl font-bold mb-3 text-black dark:text-white">No Trading Account Linked</h2>
+        <p className="text-zinc-500 dark:text-zinc-400 max-w-md mb-10 text-lg">
+          Connect your MetaTrader account via MetaApi to start tracking your performance automatically.
+        </p>
+        <Link href="/dashboard/account" className="bg-black dark:bg-white text-white dark:text-black px-10 py-4 rounded-2xl font-bold text-lg hover:scale-105 transition-transform shadow-xl">
+          Link Account Now
+        </Link>
+      </div>
+    );
+  }
 
   const selectedAccountId = searchParams.accountId || accounts[0]?.id;
   const account = accounts.find(a => a.id === selectedAccountId);

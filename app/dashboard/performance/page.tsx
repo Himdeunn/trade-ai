@@ -20,7 +20,22 @@ export default async function PerformancePage(props: {
     where: (table, { eq }) => eq(table.userId, userId),
   });
 
-  if (!account) return <div>No account found</div>;
+  if (!account) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+        <div className="bg-zinc-100 dark:bg-zinc-900 p-8 rounded-3xl mb-8">
+          <Wallet className="h-16 w-16 text-zinc-400" />
+        </div>
+        <h2 className="text-3xl font-bold mb-3 text-black dark:text-white">No Trading Account Linked</h2>
+        <p className="text-zinc-500 dark:text-zinc-400 max-w-md mb-10 text-lg">
+          Connect your MetaTrader account via MetaApi to start tracking your performance automatically.
+        </p>
+        <Link href="/dashboard/account" className="bg-black dark:bg-white text-white dark:text-black px-10 py-4 rounded-2xl font-bold text-lg hover:scale-105 transition-transform shadow-xl">
+          Link Account Now
+        </Link>
+      </div>
+    );
+  }
   const currency = account.currency || "USD";
 
   // Calculate date filter
@@ -41,9 +56,8 @@ export default async function PerformancePage(props: {
   const allTradingOps = allTransactions.filter(t => t.type === "buy" || t.type === "sell");
   const filteredTradingOps = allTradingOps.filter(t => t.openTime >= dateFilter);
 
-  // Total balance calculation (Mathematical)
-  const calculatedBalance = allTransactions.reduce((acc, t) => 
-    acc + (t.profit || 0) + (t.commission || 0) + (t.swap || 0), 0);
+  // Use real balance from database
+  const calculatedBalance = account.balance || 0;
 
   // Statistics for filtered range
   const totalTrades = filteredTradingOps.length;
@@ -126,7 +140,7 @@ export default async function PerformancePage(props: {
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
               <div className="flex items-center gap-2 mb-4 text-zinc-500">
                 <Wallet className="h-4 w-4" />
-                <h4 className="text-[10px] font-black uppercase tracking-widest">Calculated Balance</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-widest">Account Balance</h4>
               </div>
               <p className="text-4xl font-black text-black dark:text-white tracking-tighter">{formatCurrency(calculatedBalance, currency)}</p>
               <p className="text-[10px] text-zinc-500 mt-2 font-bold uppercase">Growth: {growthPercentage.toFixed(2)}% Lifetime</p>
